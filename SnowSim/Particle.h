@@ -9,10 +9,14 @@
 #define	PARTICLE_H
 
 class Particle {
+	
 public:
+	float x, y, z;
 	Particle();
 	Particle(const Particle& orig);
 	virtual ~Particle();
+	
+	void setPosition(float x, float y, float z);
 private:
 
 };

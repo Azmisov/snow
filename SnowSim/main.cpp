@@ -1,22 +1,11 @@
-#include "glfw3/glfw3.h"
-#include <iostream>
-#include <stdlib.h>
-#include <stdio.h>
-#include <pthread.h>
-
-#define WIN_W 640
-#define WIN_H 480
+#include "main.h"
 
 using namespace std;
-
-static void error_callback(int, const char*);
-void key_callback(GLFWwindow*, int, int, int, int);
-void redraw();
-void *simulate(void *args);
 
 //Old and new time values for each timestep
 double old_time, new_time = glfwGetTime();
 bool dirty_buffer = true;
+vector<Particle>* pcloud;
 
 /*
  * 
@@ -45,6 +34,9 @@ int main(int argc, char** argv) {
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glViewport(0, 0, WIN_W, WIN_H);
+	
+	//Setup simulation data
+	pcloud = createCube(5, 1);
 	
 	//Create default simulation loop
 	pthread_t sim_thread;
@@ -82,18 +74,50 @@ void redraw(){
 	
 }
 
-/**
- * Computations at each time step
- */
+vector<Particle>* createCube(int size, float spacing){
+	//point cloud definition; simple cube
+	vector<Particle> *cloud = new vector<Particle>(size*size*size);
+	for (int x=0, n=0; x<size; x++){
+		for (int y=0; y<size; y++){
+			for (int z=0; z<size; z++, n++){
+				(*cloud)[n].setPosition(x*spacing, y*spacing, z*spacing);
+			}
+		}
+	}
+	return cloud;
+}
+
+
 void *simulate(void *args){
 	cout << "Starting simulation thread..." << endl;
 	
-	//simulation variables
-	int DIMS = 3;					//spacial dimensions to solve in
-	double bounds[DIMS*2];			//bounding volume [xmin, xmax, ymin, ymax, ...]
+	//bounding volume [xmin, xmax, ymin, ymax, ...]
+	double bounds[6];
+	Particle* snow = &(*pcloud)[0];
 	
 	//initialize the domain
-	
+	int obj_size = pcloud->size();
+	bounds[0] = snow[0].x; bounds[1] = snow[0].x;
+	bounds[2] = snow[0].y; bounds[3] = snow[0].y;
+	bounds[4] = snow[0].z; bounds[5] = snow[0].z;
+	for (int i=0; i<obj_size; i++){
+		Particle &p = snow[i];
+		//X-bounds
+		if (p.x < bounds[0])
+			bounds[0] = p.x;
+		else if (p.x > bounds[1])
+			bounds[1] = p.x;
+		//Y-bounds
+		if (p.y < bounds[2])
+			bounds[2] = p.y;
+		else if (p.y > bounds[3])
+			bounds[3] = p.y;
+		//Z-bounds
+		if (p.z < bounds[4])
+			bounds[4] = p.z;
+		else if (p.z > bounds[5])
+			bounds[5] = p.z;
+	}
 	
 	pthread_exit(NULL);
 }

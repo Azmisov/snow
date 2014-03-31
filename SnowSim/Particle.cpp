@@ -7,12 +7,13 @@
 
 #include "Particle.h"
 
-Particle::Particle() {
-}
+Particle::Particle(){}
+Particle::Particle(const Particle& orig){}
+Particle::~Particle(){}
 
-Particle::Particle(const Particle& orig) {
-}
-
-Particle::~Particle() {
+void Particle::setPosition(float x, float y, float z){
+	this->x = x;
+	this->y = y;
+	this->z = z;
 }
 
