@@ -87,5 +87,13 @@ void redraw(){
  */
 void *simulate(void *args){
 	cout << "Starting simulation thread..." << endl;
+	
+	//simulation variables
+	int DIMS = 3;					//spacial dimensions to solve in
+	double bounds[DIMS*2];			//bounding volume [xmin, xmax, ymin, ymax, ...]
+	
+	//initialize the domain
+	
+	
 	pthread_exit(NULL);
 }
