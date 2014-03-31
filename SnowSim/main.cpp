@@ -1,13 +1,22 @@
 #include "glfw3/glfw3.h"
+#include <iostream>
 #include <stdlib.h>
 #include <stdio.h>
+#include <pthread.h>
 
 #define WIN_W 640
 #define WIN_H 480
 
+using namespace std;
+
 static void error_callback(int, const char*);
 void key_callback(GLFWwindow*, int, int, int, int);
-void timestep();
+void redraw();
+void *simulate(void *args);
+
+//Old and new time values for each timestep
+double old_time, new_time = glfwGetTime();
+bool dirty_buffer = true;
 
 /*
  * 
@@ -37,9 +46,14 @@ int main(int argc, char** argv) {
 	glLoadIdentity();
 	glViewport(0, 0, WIN_W, WIN_H);
 	
+	//Create default simulation loop
+	pthread_t sim_thread;
+	pthread_create(&sim_thread, NULL, simulate, NULL);
+	
 	//Drawing & event loop
 	while (!glfwWindowShouldClose(window)){
-		timestep();
+		if (dirty_buffer)
+			redraw();
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
@@ -50,12 +64,10 @@ int main(int argc, char** argv) {
 	exit(EXIT_SUCCESS);
 	return 0;
 }
-
 //Print all errors to console
 static void error_callback(int error, const char* description){
 	printf("\nError: %s",description);
 }
-
 //Key listener
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods){
     switch (key){
@@ -63,6 +75,17 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	}
 }
 
-void timestep(){
+/**
+ * Draw the scene
+ */
+void redraw(){
 	
+}
+
+/**
+ * Computations at each time step
+ */
+void *simulate(void *args){
+	cout << "Starting simulation thread..." << endl;
+	pthread_exit(NULL);
 }

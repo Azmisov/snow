@@ -4,6 +4,8 @@
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
                    projectFiles="true">
+      <itemPath>Collider.h</itemPath>
+      <itemPath>Particle.h</itemPath>
     </logicalFolder>
     <logicalFolder name="ResourceFiles"
                    displayName="Resource Files"
@@ -12,6 +14,8 @@
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
+      <itemPath>Collider.cpp</itemPath>
+      <itemPath>Particle.cpp</itemPath>
       <itemPath>main.cpp</itemPath>
     </logicalFolder>
     <logicalFolder name="TestFiles"
@@ -38,6 +42,14 @@
           <commandLine>glfw3/libglfw3.a -lGL -lX11 -lXxf86vm -lm -lpthread -lXrandr -lXi</commandLine>
         </linkerTool>
       </compileType>
+      <item path="Collider.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="Collider.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="Particle.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="Particle.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="main.cpp" ex="false" tool="1" flavor2="0">
       </item>
     </conf>
@@ -60,6 +72,14 @@
           <developmentMode>5</developmentMode>
         </asmTool>
       </compileType>
+      <item path="Collider.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="Collider.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="Particle.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="Particle.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="main.cpp" ex="false" tool="1" flavor2="0">
       </item>
     </conf>
