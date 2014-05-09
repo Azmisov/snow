@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configurationDescriptor version="90">
+<configurationDescriptor version="88">
   <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
                    projectFiles="true">
       <itemPath>Collider.h</itemPath>
+      <itemPath>Grid.h</itemPath>
       <itemPath>Particle.h</itemPath>
-      <itemPath>Point3f.h</itemPath>
+      <itemPath>PointCloud.h</itemPath>
+      <itemPath>Vector2f.h</itemPath>
       <itemPath>main.h</itemPath>
     </logicalFolder>
     <logicalFolder name="ResourceFiles"
@@ -17,9 +19,22 @@
                    displayName="Source Files"
                    projectFiles="true">
       <itemPath>Collider.cpp</itemPath>
+      <itemPath>Grid.cpp</itemPath>
       <itemPath>Particle.cpp</itemPath>
-      <itemPath>Point3f.cpp</itemPath>
+      <itemPath>PointCloud.cpp</itemPath>
+      <itemPath>Vector2f.cpp</itemPath>
       <itemPath>main.cpp</itemPath>
+    </logicalFolder>
+    <logicalFolder name="TestFiles"
+                   displayName="Test Files"
+                   projectFiles="false"
+                   kind="TEST_LOGICAL_FOLDER">
+    </logicalFolder>
+    <logicalFolder name="ExternalFiles"
+                   displayName="Important Files"
+                   projectFiles="false"
+                   kind="IMPORTANT_FILES_FOLDER">
+      <itemPath>Makefile</itemPath>
     </logicalFolder>
     <logicalFolder name="TestFiles"
                    displayName="Test Files"
@@ -37,9 +52,8 @@
   <confs>
     <conf name="Debug" type="1">
       <toolsSet>
+        <remote-sources-mode>LOCAL_SOURCES</remote-sources-mode>
         <compilerSet>default</compilerSet>
-        <dependencyChecking>true</dependencyChecking>
-        <rebuildPropChanged>false</rebuildPropChanged>
       </toolsSet>
       <compileType>
         <linkerTool>
@@ -50,13 +64,21 @@
       </item>
       <item path="Collider.h" ex="false" tool="3" flavor2="0">
       </item>
+      <item path="Grid.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="Grid.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="Particle.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="Particle.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="Point3f.cpp" ex="false" tool="1" flavor2="0">
+      <item path="PointCloud.cpp" ex="false" tool="1" flavor2="0">
       </item>
-      <item path="Point3f.h" ex="false" tool="3" flavor2="0">
+      <item path="PointCloud.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="Vector2f.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="Vector2f.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="main.cpp" ex="false" tool="1" flavor2="0">
       </item>
@@ -65,9 +87,8 @@
     </conf>
     <conf name="Release" type="1">
       <toolsSet>
+        <remote-sources-mode>LOCAL_SOURCES</remote-sources-mode>
         <compilerSet>default</compilerSet>
-        <dependencyChecking>true</dependencyChecking>
-        <rebuildPropChanged>false</rebuildPropChanged>
       </toolsSet>
       <compileType>
         <cTool>
@@ -87,13 +108,21 @@
       </item>
       <item path="Collider.h" ex="false" tool="3" flavor2="0">
       </item>
+      <item path="Grid.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="Grid.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="Particle.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="Particle.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="Point3f.cpp" ex="false" tool="1" flavor2="0">
+      <item path="PointCloud.cpp" ex="false" tool="1" flavor2="0">
       </item>
-      <item path="Point3f.h" ex="false" tool="3" flavor2="0">
+      <item path="PointCloud.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="Vector2f.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="Vector2f.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="main.cpp" ex="false" tool="1" flavor2="0">
       </item>

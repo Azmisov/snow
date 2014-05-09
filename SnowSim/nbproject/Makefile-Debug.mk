@@ -36,8 +36,10 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 # Object Files
 OBJECTFILES= \
 	${OBJECTDIR}/Collider.o \
+	${OBJECTDIR}/Grid.o \
 	${OBJECTDIR}/Particle.o \
-	${OBJECTDIR}/Point3f.o \
+	${OBJECTDIR}/PointCloud.o \
+	${OBJECTDIR}/Vector2f.o \
 	${OBJECTDIR}/main.o
 
 
@@ -70,15 +72,25 @@ ${OBJECTDIR}/Collider.o: Collider.cpp
 	${RM} $@.d
 	$(COMPILE.cc) -g -MMD -MP -MF $@.d -o ${OBJECTDIR}/Collider.o Collider.cpp
 
+${OBJECTDIR}/Grid.o: Grid.cpp 
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} $@.d
+	$(COMPILE.cc) -g -MMD -MP -MF $@.d -o ${OBJECTDIR}/Grid.o Grid.cpp
+
 ${OBJECTDIR}/Particle.o: Particle.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} $@.d
 	$(COMPILE.cc) -g -MMD -MP -MF $@.d -o ${OBJECTDIR}/Particle.o Particle.cpp
 
-${OBJECTDIR}/Point3f.o: Point3f.cpp 
+${OBJECTDIR}/PointCloud.o: PointCloud.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} $@.d
-	$(COMPILE.cc) -g -MMD -MP -MF $@.d -o ${OBJECTDIR}/Point3f.o Point3f.cpp
+	$(COMPILE.cc) -g -MMD -MP -MF $@.d -o ${OBJECTDIR}/PointCloud.o PointCloud.cpp
+
+${OBJECTDIR}/Vector2f.o: Vector2f.cpp 
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} $@.d
+	$(COMPILE.cc) -g -MMD -MP -MF $@.d -o ${OBJECTDIR}/Vector2f.o Vector2f.cpp
 
 ${OBJECTDIR}/main.o: main.cpp 
 	${MKDIR} -p ${OBJECTDIR}
