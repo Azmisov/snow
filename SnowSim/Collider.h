@@ -1,10 +1,3 @@
-/* 
- * File:   Collider.h
- * Author: inygaard
- *
- * Created on March 31, 2014, 2:26 PM
- */
-
 #ifndef COLLIDER_H
 #define	COLLIDER_H
 
@@ -17,5 +10,5 @@ private:
 
 };
 
-#endif	/* COLLIDER_H */
+#endif
 

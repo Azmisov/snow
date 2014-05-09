@@ -34,9 +34,16 @@ int main(int argc, char** argv) {
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glViewport(0, 0, WIN_W, WIN_H);
+	glOrtho(0, 10, 0, 10, 0, 1);
+	
+	//Set default visualization parameters
+	glClearColor(1, 1, 1, 1);
+	glColor3f(0, 0, 1);
+	glPointSize(5);
+	glEnable(GL_POINT_SMOOTH);
 	
 	//Setup simulation data
-	pcloud = createCube(5, 1);
+	pcloud = Particle::createSquare(5, 1);
 	
 	//Create default simulation loop
 	pthread_t sim_thread;
@@ -44,8 +51,10 @@ int main(int argc, char** argv) {
 	
 	//Drawing & event loop
 	while (!glfwWindowShouldClose(window)){
-		if (dirty_buffer)
+		if (dirty_buffer){
 			redraw();
+			dirty_buffer = false;
+		}
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
@@ -67,26 +76,16 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	}
 }
 
-/**
- * Draw the scene
- */
 void redraw(){
-	
-}
-
-vector<Particle>* createCube(int size, float spacing){
-	//point cloud definition; simple cube
-	vector<Particle> *cloud = new vector<Particle>(size*size*size);
-	for (int x=0, n=0; x<size; x++){
-		for (int y=0; y<size; y++){
-			for (int z=0; z<size; z++, n++){
-				(*cloud)[n].setPosition(x*spacing, y*spacing, z*spacing);
-			}
-		}
+	glClear(GL_COLOR_BUFFER_BIT);
+	Particle* snow = &(*pcloud)[0];
+	glBegin(GL_POINTS);
+	for (int i=0, obj_size = pcloud->size(); i<obj_size; i++){
+		glVertex2f(snow[i].x, snow[i].y);
+		cout << "(" << snow[i].x << ", " << snow[i].y << ")" << endl;
 	}
-	return cloud;
+	glEnd();
 }
-
 
 void *simulate(void *args){
 	cout << "Starting simulation thread..." << endl;
@@ -99,7 +98,6 @@ void *simulate(void *args){
 	int obj_size = pcloud->size();
 	bounds[0] = snow[0].x; bounds[1] = snow[0].x;
 	bounds[2] = snow[0].y; bounds[3] = snow[0].y;
-	bounds[4] = snow[0].z; bounds[5] = snow[0].z;
 	for (int i=0; i<obj_size; i++){
 		Particle &p = snow[i];
 		//X-bounds
@@ -112,11 +110,6 @@ void *simulate(void *args){
 			bounds[2] = p.y;
 		else if (p.y > bounds[3])
 			bounds[3] = p.y;
-		//Z-bounds
-		if (p.z < bounds[4])
-			bounds[4] = p.z;
-		else if (p.z > bounds[5])
-			bounds[5] = p.z;
 	}
 	
 	pthread_exit(NULL);
