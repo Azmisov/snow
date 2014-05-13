@@ -28,12 +28,21 @@ void Grid::initialize(){
 		//Shape function gives a blending radius of two;
 		//so we do computations within a 2x2 square for each particle
 		for (int idx=0, x=ox-1, x_end=x+2; x<=x_end; x++){
-			float wx = Grid::interpolate(x-ox);
-			for (int y=oy-1, y_end=y+2; y<=y_end; y++){
-				//Final weight is the dyadic product of weights in each dimension
-				float weight = !wx ? 0 : wx * Grid::interpolate(y-oy);
-				//Store this weight, because we use it to interpolate forces
-				p[i].weights[idx++] = weight;
+			//X-dimension interpolation
+			float x_pos = x-ox,
+				wx = Grid::bspline(x_pos),
+				dx = Grid::bsplineSlope(x_pos);
+			for (int y=oy-1, y_end=y+2; y<=y_end; y++, idx++){
+				//Y-dimension interpolation
+				float y_pos = y-oy,
+					wy = Grid::bspline(y_pos),
+					dy = Grid::bsplineSlope(y_pos);
+				
+				//Final weight is dyadic product of weights in each dimension
+				float weight = wx*wy;
+				p[i].weights[idx] = weight;
+				//Weight gradient is a vector of partial derivatives
+				p[i].weight_gradient[idx].setPosition(dx*wy, wx*dy);
 				
 				//Interpolate mass
 				nodes[(int) (x*size[0]+y)].mass += weight*p[i].mass;

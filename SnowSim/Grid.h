@@ -27,12 +27,21 @@ public:
 	
 	//Cubic B-spline shape/basis/interpolation function
 	//A smooth curve from (0,1) to (1,0)
-	static float interpolate(float x){
+	static float bspline(float x){
 		x = fabs(x);
-		if (0 <= x && x < 1)
+		if (x < 1)
 			return x*x*(x/2 - 1) + 2/3;
 		if (1 <= x && x < 2)
 			return x*(x*(-x/6 + 1) - 2) + 4/3;
+		return 0;
+	}
+	//Slope of interpolation function
+	static float bsplineSlope(float x){
+		x = fabs(x);
+		if (x < 1)
+			return x/2*(3*x - 4);
+		if (1 <= x && x < 2)
+			return x/2*(4 - x) - 2;
 		return 0;
 	}
 };

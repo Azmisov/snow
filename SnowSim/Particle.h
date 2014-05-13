@@ -14,6 +14,7 @@ public:
 	Vector2f def_elastic, def_plastic;
 	//Grid interpolation weights
 	Vector2f grid_position;
+	Vector2f weight_gradient[16];
 	float weights[16];
 	
 	Particle();
