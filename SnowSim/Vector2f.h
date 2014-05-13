@@ -20,6 +20,7 @@ public:
 	void normalize();
 	float dot(const Vector2f &v) const;
 	float sum() const;
+	float product() const;
 	float length() const;
 	
 	//Operator Overloads

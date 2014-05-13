@@ -31,6 +31,9 @@ float Vector2f::dot(const Vector2f &v) const{
 float Vector2f::sum() const{
 	return loc[0] + loc[1];
 }
+float Vector2f::product() const{
+	return loc[0] * loc[1];
+}
 float Vector2f::length() const{
 	double sum = 0;
 	for (int i=0; i<2; i++)

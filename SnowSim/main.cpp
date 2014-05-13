@@ -1,12 +1,16 @@
 #include "main.h"
 #include "PointCloud.h"
+#include "Grid.h"
 
 using namespace std;
 
 //Old and new time values for each timestep
 double old_time, new_time = glfwGetTime();
 bool dirty_buffer = true;
+
+//Simulation data
 PointCloud snow;
+Grid* grid;
 
 int main(int argc, char** argv) {
 	//Create GLFW window
@@ -36,14 +40,14 @@ int main(int argc, char** argv) {
 	
 	//Set default visualization parameters
 	glClearColor(1, 1, 1, 1);
-	glColor3f(0, 0, 1);
-	glPointSize(4);
-	glEnable(GL_POINT_SMOOTH);
 	
 	//Setup simulation data
 	snow = *PointCloud::createSquare(1.5, 20);
 	snow.scale(Vector2f(0), Vector2f(7));
 	snow.translate(Vector2f(230, 400));
+	
+	grid = new Grid(Vector2f(0), Vector2f(WIN_W, WIN_H), Vector2f(60));
+	grid->initialize(&snow);
 	
 	//Create default simulation loop
 	pthread_t sim_thread;
@@ -78,14 +82,28 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
 void redraw(){
 	glClear(GL_COLOR_BUFFER_BIT);
+	glEnable(GL_POINT_SMOOTH);
+		
+	//Grid nodes
+	glColor3f(1, 0, 0);
+	glPointSize(2);
+	glBegin(GL_POINTS);
+	for (int i=0; i<grid->size[0]; i++){
+		for (int j=0; j<grid->size[1]; j++)
+			glVertex2fv((grid->origin+grid->cellsize*Vector2f(i, j)).loc);
+	}
+	glEnd();
+	
+	//Snow particles
+	glColor3f(0, 0, 1);
+	glPointSize(4);
 	glBegin(GL_POINTS);
 	for (int i=0; i<snow.size; i++)
-		glVertex2f(snow.particles[i].position[0], snow.particles[i].position[1]);
+		glVertex2fv(snow.particles[i].position.loc);
 	glEnd();
 }
 
 void *simulate(void *args){
 	cout << "Starting simulation thread..." << endl;
-	
 	pthread_exit(NULL);
 }
