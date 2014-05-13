@@ -8,6 +8,8 @@ class Particle {
 public:
 	float volume, mass, density;
 	Vector2f position, velocity;
+	//Lame parameters
+	float lambda, mu;
 	//Deformation gradient (elastic and plastic parts)
 	Vector2f def_elastic, def_plastic;
 	//Grid interpolation weights
@@ -18,7 +20,7 @@ public:
 	Particle(const Particle& orig);
 	virtual ~Particle();
 	
-	void setPosition(float x, float y);
+	Vector2f stressForce();
 };
 
 #endif
