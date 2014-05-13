@@ -7,9 +7,12 @@
 #include <cstring>
 #include <stdio.h>
 
+#define FLIP_percent .95
+
 typedef struct GridNode{
 	float mass;
 	Vector2f velocity;
+	Vector2f velocity_new;
 } GridNode;
 
 class Grid {
@@ -24,6 +27,7 @@ public:
 
 	void initialize();
 	void calculateVolumes();
+	void updateVelocities();
 	
 	//Cubic B-spline shape/basis/interpolation function
 	//A smooth curve from (0,1) to (1,0)

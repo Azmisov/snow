@@ -16,6 +16,7 @@ public:
 	//Transform points in cloud
 	void scale(Vector2f origin, Vector2f scale);
 	void translate(Vector2f off);
+	
 	//Get bounding box [xmin, xmax, ymin, ymax]
 	void bounds(float bounds[4]);
 	
@@ -32,7 +33,6 @@ public:
 			for (int y=0; y<dim; y++){
 				Particle &p = obj->particles[n++];
 				p.position.setPosition(x, y);
-				p.density = 0;
 				p.mass = m;
 			}
 		}

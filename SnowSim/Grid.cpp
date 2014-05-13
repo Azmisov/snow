@@ -41,6 +41,7 @@ void Grid::initialize(){
 				//Final weight is dyadic product of weights in each dimension
 				float weight = wx*wy;
 				p[i].weights[idx] = weight;
+				
 				//Weight gradient is a vector of partial derivatives
 				p[i].weight_gradient[idx].setPosition(dx*wy, wx*dy);
 				
@@ -74,6 +75,7 @@ void Grid::calculateVolumes(){
 		int ox = p[i].grid_position[0],
 			oy = p[i].grid_position[1];
 		//First compute particle density
+		p[i].density = 0;
 		for (int idx=0, x=ox-1, x_end=x+2; x<=x_end; x++){
 			for (int y=oy-1, y_end=y+2; y<=y_end; y++){
 				//Node density is trivial
@@ -88,3 +90,29 @@ void Grid::calculateVolumes(){
 	}
 }
 
+//Map grid velocities back to particles
+void Grid::updateVelocities(){
+	Particle* p = obj->particles;
+	for (int i=0; i<obj->size; i++){
+		//We calculate PIC and FLIP velocities separately
+		Vector2f pic, flip = p[i].velocity;
+		
+		int ox = p[i].grid_position[0],
+			oy = p[i].grid_position[1];
+		for (int idx=0, x=ox-1, x_end=x+2; x<=x_end; x++){
+			for (int y=oy-1, y_end=y+2; y<=y_end; y++){
+				//Interpolation weight
+				float weight = p[i].weights[idx++];
+				//Get the node velocity
+				GridNode &node = nodes[(int) (x*size[0]+y)];
+				
+				//Particle in cell
+				pic += node.velocity_new*weight;
+				//Fluid implicit particle
+				flip += (node.velocity_new - node.velocity)*weight;
+			}
+		}
+		//Final velocity is a linear combination of PIC and FLIP components
+		p[i].velocity = flip*FLIP_percent + pic*(1-FLIP_percent);
+	}
+}
