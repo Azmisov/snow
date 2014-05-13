@@ -4,6 +4,7 @@
 #include "PointCloud.h"
 #include "Vector2f.h"
 #include <math.h>
+#include <cstring>
 #include <stdio.h>
 
 typedef struct GridNode{
@@ -15,12 +16,14 @@ class Grid {
 public:
 	Vector2f origin, size, cellsize;
 	GridNode* nodes;
+	PointCloud* obj;
 	
-	Grid(Vector2f pos, Vector2f dims, Vector2f cells);
+	Grid(Vector2f pos, Vector2f dims, Vector2f cells, PointCloud* obj);
 	Grid(const Grid& orig);
 	virtual ~Grid();
 
-	void initialize(PointCloud* obj);
+	void initialize();
+	void calculateVolumes();
 	
 	//Cubic B-spline shape/basis/interpolation function
 	//A smooth curve from (0,1) to (1,0)

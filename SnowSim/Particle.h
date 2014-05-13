@@ -6,10 +6,10 @@
 
 class Particle {
 public:
-	float volume, mass;
+	float volume, mass, density;
 	Vector2f position, velocity;
 	//Deformation gradient (elastic and plastic parts)
-	Vector2f grad_elastic, grad_plastic;
+	Vector2f def_elastic, def_plastic;
 	//Grid interpolation weights
 	Vector2f grid_position;
 	float weights[16];

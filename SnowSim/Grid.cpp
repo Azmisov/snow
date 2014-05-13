@@ -1,6 +1,7 @@
 #include "Grid.h"
 
-Grid::Grid(Vector2f pos, Vector2f dims, Vector2f cells){
+Grid::Grid(Vector2f pos, Vector2f dims, Vector2f cells, PointCloud* object){
+	obj = object;
 	origin = pos;
 	cellsize = dims/cells;
 	size = cells+1;
@@ -9,7 +10,9 @@ Grid::Grid(Vector2f pos, Vector2f dims, Vector2f cells){
 Grid::Grid(const Grid& orig){}
 Grid::~Grid(){}
 
-void Grid::initialize(PointCloud* obj){
+//Maps mass and velocity to the grid
+//Enable the "volumes" flag for the first iteration only
+void Grid::initialize(){
 	//Reset the grid
 	memset(nodes, 0, sizeof(GridNode)*size.product());
 	
@@ -33,11 +36,46 @@ void Grid::initialize(PointCloud* obj){
 				p[i].weights[idx++] = weight;
 				
 				//Interpolate mass
-				nodes[(int) (x*size[0]+y)] = weight*p[i].mass;
+				nodes[(int) (x*size[0]+y)].mass += weight*p[i].mass;
 			}
 		}
 	}
 	
 	//We interpolate velocity afterwards, to conserve momentum
+	for (int i=0; i<obj->size; i++){
+		int ox = p[i].grid_position[0],
+			oy = p[i].grid_position[1];
+		for (int idx=0, x=ox-1, x_end=x+2; x<=x_end; x++){
+			for (int y=oy-1, y_end=y+2; y<=y_end; y++){
+				//Interpolate velocity
+				int n = (int) (x*size[0]+y);
+				nodes[n].velocity += p[i].weights[idx++] * p[i].velocity * p[i].mass / nodes[n].mass;
+			}
+		}
+	}
+}
+
+//Maps volume from the grid to particles
+//This should only be called once, at the beginning of the simulation
+void Grid::calculateVolumes(){	
+	//Estimate each particles volume (for force calculations)
+	float node_volume = cellsize.product();
+	Particle* p = obj->particles;
+	for (int i=0; i<obj->size; i++){
+		int ox = p[i].grid_position[0],
+			oy = p[i].grid_position[1];
+		//First compute particle density
+		for (int idx=0, x=ox-1, x_end=x+2; x<=x_end; x++){
+			for (int y=oy-1, y_end=y+2; y<=y_end; y++){
+				//Node density is trivial
+				int n = (int) (x*size[0]+y);
+				float node_density = nodes[n].mass / node_volume;
+				//Weighted sum of nodes
+				p[i].density += p[i].weights[idx++] * node_density;
+			}
+		}
+		//Volume for each particle can be found from density
+		p[i].volume = p[i].mass / p[i].density;
+	}
 }
 

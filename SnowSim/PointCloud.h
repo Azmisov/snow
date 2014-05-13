@@ -32,7 +32,7 @@ public:
 			for (int y=0; y<dim; y++){
 				Particle &p = obj->particles[n++];
 				p.position.setPosition(x, y);
-				p.velocity = 0;
+				p.density = 0;
 				p.mass = m;
 			}
 		}

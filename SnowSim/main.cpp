@@ -46,8 +46,9 @@ int main(int argc, char** argv) {
 	snow.scale(Vector2f(0), Vector2f(7));
 	snow.translate(Vector2f(230, 400));
 	
-	grid = new Grid(Vector2f(0), Vector2f(WIN_W, WIN_H), Vector2f(60));
-	grid->initialize(&snow);
+	grid = new Grid(Vector2f(0), Vector2f(WIN_W, WIN_H), Vector2f(60), &snow);
+	grid->initialize();	
+	grid->calculateVolumes();	//only for first iteration
 	
 	//Create default simulation loop
 	pthread_t sim_thread;
