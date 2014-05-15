@@ -68,7 +68,7 @@ public:
 	void setPosition(const Vector2f &v);
 };
 
-//Scalar * vector
+//Scalar operations
 const Vector2f operator*(const float& c, const Vector2f& v);
 const Vector2f operator/(const float& c, const Vector2f& v);
 

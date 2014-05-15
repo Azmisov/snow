@@ -3,6 +3,7 @@
 
 #include <vector>
 #include "Vector2f.h"
+#include "Matrix2f.h"
 
 class Particle {
 public:
@@ -11,7 +12,7 @@ public:
 	//Lame parameters
 	float lambda, mu;
 	//Deformation gradient (elastic and plastic parts)
-	Vector2f def_elastic, def_plastic;
+	Matrix2f def_elastic, def_plastic;
 	//Grid interpolation weights
 	Vector2f grid_position;
 	Vector2f weight_gradient[16];
