@@ -6,6 +6,7 @@
                    projectFiles="true">
       <itemPath>Collider.h</itemPath>
       <itemPath>Grid.h</itemPath>
+      <itemPath>Matrix2f.h</itemPath>
       <itemPath>Particle.h</itemPath>
       <itemPath>PointCloud.h</itemPath>
       <itemPath>Vector2f.h</itemPath>
@@ -20,6 +21,7 @@
                    projectFiles="true">
       <itemPath>Collider.cpp</itemPath>
       <itemPath>Grid.cpp</itemPath>
+      <itemPath>Matrix2f.cpp</itemPath>
       <itemPath>Particle.cpp</itemPath>
       <itemPath>PointCloud.cpp</itemPath>
       <itemPath>Vector2f.cpp</itemPath>
@@ -68,6 +70,10 @@
       </item>
       <item path="Grid.h" ex="false" tool="3" flavor2="0">
       </item>
+      <item path="Matrix2f.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="Matrix2f.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="Particle.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="Particle.h" ex="false" tool="3" flavor2="0">
@@ -111,6 +117,10 @@
       <item path="Grid.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="Grid.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="Matrix2f.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="Matrix2f.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="Particle.cpp" ex="false" tool="1" flavor2="0">
       </item>

@@ -17,38 +17,18 @@ public:
 	Vector2f(const Vector2f& orig);
 	virtual ~Vector2f();
 	
+	//Operations
+	void setPosition(float val);
+	void setPosition(float x, float y);
+	void setPosition(const Vector2f &v);
+	
 	void normalize();
 	float dot(const Vector2f &v) const;
 	float sum() const;
 	float product() const;
 	float length() const;
 	
-	//Operator Overloads
-	//Vector * Scalar
-	const Vector2f operator*(const float& c) const;
-	Vector2f& operator*=(const float& c);
-	//Vector / Scalar
-	const Vector2f operator/(const float& c) const;
-	Vector2f& operator/=(const float& c);
-	//Vector / Vector (piecewise division)
-	const Vector2f operator/(const Vector2f& v) const;
-	Vector2f& operator/=(const Vector2f& v);
-	//Vector * Vector (dot product)
-	const Vector2f operator*(const Vector2f& v) const;
-	Vector2f& operator*=(const Vector2f& v);
-	//Vector ^ Vector (cross product)
-	const Vector2f operator^(const Vector2f& v) const;
-	Vector2f& operator^=(const Vector2f& v);
-	//Add and subtract scalar
-	const Vector2f operator+(const float& c) const;
-	Vector2f& operator+=(const float& c);
-	const Vector2f operator-(const float& c) const;
-	Vector2f& operator-=(const float& c);
-	//Add and subtract vector
-	const Vector2f operator+(const Vector2f& v) const;
-	Vector2f& operator+=(const Vector2f& v);
-	const Vector2f operator-(const Vector2f& v) const;
-	Vector2f& operator-=(const Vector2f& v);
+	//OVERLOADS
 	//Unary negation
 	const Vector2f operator-() const;
 	//Array subscripts
@@ -62,15 +42,43 @@ public:
 	bool operator<=(const Vector2f& v) const;
 	bool operator>=(const Vector2f& v) const;
 	
-	//Operations
-	void setPosition(float val);
-	void setPosition(float x, float y);
-	void setPosition(const Vector2f &v);
+	//SCALAR OVERLOADS
+	//Vector * Scalar
+	const Vector2f operator*(const float& c) const;
+	Vector2f& operator*=(const float& c);
+	//Vector / Scalar
+	const Vector2f operator/(const float& c) const;
+	Vector2f& operator/=(const float& c);
+	//Vector + Scalar
+	const Vector2f operator+(const float& c) const;
+	Vector2f& operator+=(const float& c);
+	//Vector - Scalar
+	const Vector2f operator-(const float& c) const;
+	Vector2f& operator-=(const float& c);
+	
+	//VECTOR OVERLOADS
+	//Vector / Vector (piecewise division)
+	const Vector2f operator/(const Vector2f& v) const;
+	Vector2f& operator/=(const Vector2f& v);
+	//Vector * Vector (dot product)
+	const Vector2f operator*(const Vector2f& v) const;
+	Vector2f& operator*=(const Vector2f& v);
+	//Vector ^ Vector (cross product)
+	const Vector2f operator^(const Vector2f& v) const;
+	Vector2f& operator^=(const Vector2f& v);
+	//Vector + Vector
+	const Vector2f operator+(const Vector2f& v) const;
+	Vector2f& operator+=(const Vector2f& v);
+	//Vector - Vector
+	const Vector2f operator-(const Vector2f& v) const;
+	Vector2f& operator-=(const Vector2f& v);
 };
 
 //Scalar operations
 const Vector2f operator*(const float& c, const Vector2f& v);
 const Vector2f operator/(const float& c, const Vector2f& v);
+const Vector2f operator-(const float& c, const Vector2f& v);
+const Vector2f operator+(const float& c, const Vector2f& v);
 
 #endif
 

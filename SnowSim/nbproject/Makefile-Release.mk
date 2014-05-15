@@ -37,6 +37,7 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 OBJECTFILES= \
 	${OBJECTDIR}/Collider.o \
 	${OBJECTDIR}/Grid.o \
+	${OBJECTDIR}/Matrix2f.o \
 	${OBJECTDIR}/Particle.o \
 	${OBJECTDIR}/PointCloud.o \
 	${OBJECTDIR}/Vector2f.o \
@@ -76,6 +77,11 @@ ${OBJECTDIR}/Grid.o: Grid.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} $@.d
 	$(COMPILE.cc) -O2 -MMD -MP -MF $@.d -o ${OBJECTDIR}/Grid.o Grid.cpp
+
+${OBJECTDIR}/Matrix2f.o: Matrix2f.cpp 
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} $@.d
+	$(COMPILE.cc) -O2 -MMD -MP -MF $@.d -o ${OBJECTDIR}/Matrix2f.o Matrix2f.cpp
 
 ${OBJECTDIR}/Particle.o: Particle.cpp 
 	${MKDIR} -p ${OBJECTDIR}

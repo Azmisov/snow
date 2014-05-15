@@ -1,11 +1,15 @@
 #ifndef MATRIX2F_H
 #define	MATRIX2F_H
 
+#include <cstring>
+#include "Vector2f.h"
+
 class Matrix2f {
 public:
 	//[column][row] better for cpu caching?
 	float data[2][2];
 	
+	Matrix2f();
 	Matrix2f(float i11, float i12, float i21, float i22);
 	Matrix2f(const Matrix2f& orig);
 	virtual ~Matrix2f();
@@ -15,12 +19,38 @@ public:
 	const Matrix2f inverse() const;
 	//Singular value decomposition, where this = w.diag_product(e)*v.transpose()
 	void svd(Matrix2f* w, Vector2f* e, Matrix2f* v) const;
-	//Matrix * Matrix, where v represents a diagonal matrix
-	void diag_product(const Vector2f& v);
 	
+	//DIAGONAL MATRIX OPERATIONS
+	//Matrix * Matrix
+	void diag_product(const Vector2f& v);
+	//Matrix - Matrix
+	void diag_difference(const float& c);
+	void diag_difference(const Vector2f& v);
+	//Matrix + Matrix
+	void diag_sum(const float& c);
+	void diag_sum(const Vector2f& v);
+	
+	//SCALAR OVERLOADS
 	//Matrix / Scalar
 	const Matrix2f operator/(const float& c) const;
 	Matrix2f& operator/=(const float& c);
+	//Matrix * Scalar
+	const Matrix2f operator*(const float& c) const;
+	Matrix2f& operator*=(const float& c);
+	//Matrix - Scalar
+	const Matrix2f operator-(const float& c) const;
+	Matrix2f& operator-=(const float& c);
+	//Matrix + Scalar
+	const Matrix2f operator+(const float& c) const;
+	Matrix2f& operator+=(const float& c);
+	
+	//VECTOR OVERLOADS
+	//Matrix + Matrix
+	const Matrix2f operator+(const Matrix2f& m) const;
+	Matrix2f& operator+=(const Matrix2f& m);
+	//Matrix - Matrix
+	const Matrix2f operator-(const Matrix2f& m) const;
+	Matrix2f& operator-=(const Matrix2f& m);
 	//Matrix * Matrix
 	const Matrix2f operator*(const Matrix2f& m) const;
 	//Matrix * Vector
@@ -28,6 +58,9 @@ public:
 };
 
 const Matrix2f operator/(const float& c, const Matrix2f& m);
+const Matrix2f operator*(const float& c, const Matrix2f& m);
+const Matrix2f operator+(const float& c, const Matrix2f& m);
+const Matrix2f operator-(const float& c, const Matrix2f& m);
 
 #endif
 
