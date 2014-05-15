@@ -23,6 +23,9 @@ void Matrix2f::setData(float data[2][2]){
 void Matrix2f::setData(const float data[2][2]){
 	setData(data[0][0], data[1][0], data[0][1], data[1][1]);
 }
+void Matrix2f::setData(float val){
+	setData(val, val, val, val);
+}
 void Matrix2f::setData(float i11, float i12, float i21, float i22){
 	data[0][0] = i11;
 	data[0][1] = i21;
@@ -30,7 +33,7 @@ void Matrix2f::setData(float i11, float i12, float i21, float i22){
 	data[1][1] = i22;
 }
 
-float Matrix2f::determinant() const{
+const float Matrix2f::determinant() const{
 	return data[0][0]*data[1][1] - data[0][1]*data[1][0];
 }
 const Matrix2f Matrix2f::transpose() const{
@@ -46,7 +49,7 @@ const Matrix2f Matrix2f::inverse() const{
 	);
 }
 void Matrix2f::svd(Matrix2f* w, Vector2f* e, Matrix2f* v) const{
-	
+	//TODO: compute singular value decomposition
 }
 
 //DIAGONAL MATRIX OPERATIONS

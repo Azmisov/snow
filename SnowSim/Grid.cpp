@@ -8,7 +8,9 @@ Grid::Grid(Vector2f pos, Vector2f dims, Vector2f cells, PointCloud* object){
 	nodes = new GridNode[(int) size.product()];
 }
 Grid::Grid(const Grid& orig){}
-Grid::~Grid(){}
+Grid::~Grid(){
+	delete[] nodes;
+}
 
 //Maps mass and velocity to the grid
 //Enable the "volumes" flag for the first iteration only
@@ -64,7 +66,6 @@ void Grid::initialize(){
 		}
 	}
 }
-
 //Maps volume from the grid to particles
 //This should only be called once, at the beginning of the simulation
 void Grid::calculateVolumes(){	
@@ -89,7 +90,6 @@ void Grid::calculateVolumes(){
 		p[i].volume = p[i].mass / p[i].density;
 	}
 }
-
 //Map grid velocities back to particles
 void Grid::updateVelocities(){
 	Particle* p = obj->particles;
@@ -114,5 +114,23 @@ void Grid::updateVelocities(){
 		}
 		//Final velocity is a linear combination of PIC and FLIP components
 		p[i].velocity = flip*FLIP_PERCENT + pic*(1-FLIP_PERCENT);
+	}
+}
+//Map grid velocity gradient back to particles
+void Grid::updateVelocityGradients(){
+	Particle* p = obj->particles;
+	for (int i=0; i<obj->size; i++){
+		//Reset the velocity gradient to start
+		Matrix2f& grad = p[i].velocity_gradient;
+		grad.setData(0.0);
+		
+		int ox = p[i].grid_position[0],
+			oy = p[i].grid_position[1];
+		for (int idx=0, x=ox-1, x_end=x+2; x<=x_end; x++){
+			for (int y=oy-1, y_end=y+2; y<=y_end; y++){
+				//Weight each node's velocity by the shape function gradient
+				grad += nodes[(int) (x*size[0]+y)].velocity_new.trans_product(p[i].weight_gradient[idx++]);
+			}
+		}
 	}
 }

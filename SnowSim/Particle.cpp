@@ -17,6 +17,7 @@ void Particle::gradientUpdate(){
 	dx.diag_sum(1);
 	def_elastic.setData(def_elastic * dx);
 	Matrix2f f_all = def_elastic * def_plastic;
+	
 	//We compute the SVD decomposition
 	//The singular values (basically a scale transform) tell us if 
 	//the particle has exceeded critical stretch/compression
@@ -28,6 +29,7 @@ void Particle::gradientUpdate(){
 		else if (svd_e[i] > CRIT_STRETCH)
 			svd_e[i] = CRIT_STRETCH;
 	}
+	
 	//Recompute elastic and plastic gradient
 	//We're basically just putting the SVD back together again
 	Matrix2f v_cpy(svd_v), w_cpy(svd_w);
@@ -35,6 +37,9 @@ void Particle::gradientUpdate(){
 	w_cpy.diag_product(svd_e);
 	def_plastic = v_cpy*svd_w.transpose()*f_all;
 	def_elastic = w_cpy*svd_v.transpose();
+	
+	//Update lame parameters to account for hardening
+	
 }
 Matrix2f Particle::stressForce() const{
 	/* Stress force on each particle is: -volume*cauchy_stress

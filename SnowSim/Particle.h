@@ -1,7 +1,7 @@
 #ifndef PARTICLE_H
 #define	PARTICLE_H
 
-#include <vector>
+#include <cmath>
 #include "SimConstants.h"
 #include "Vector2f.h"
 #include "Matrix2f.h"
@@ -10,7 +10,7 @@ class Particle {
 public:
 	float volume, mass, density;
 	Vector2f position, velocity;
-	Matrix2f velocity_gradient;	//TODO: this needs to be for time n+1
+	Matrix2f velocity_gradient;
 	//Lame parameters
 	float lambda, mu;
 	//Deformation gradient (elastic and plastic parts)

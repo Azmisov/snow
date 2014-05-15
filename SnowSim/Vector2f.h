@@ -1,9 +1,9 @@
-/**
- * A 2-dimensional data value
- */
-
 #ifndef VECTOR2F_H
 #define	VECTOR2F_H
+
+#include "Matrix2f.h"
+
+class Matrix2f;
 
 class Vector2f {
 public:
@@ -23,10 +23,12 @@ public:
 	void setPosition(const Vector2f &v);
 	
 	void normalize();
-	float dot(const Vector2f &v) const;
-	float sum() const;
-	float product() const;
-	float length() const;
+	const float dot(const Vector2f &v) const;
+	const float sum() const;
+	const float product() const;
+	const float length() const;
+	//Vector * Vector^T
+	const Matrix2f trans_product(const Vector2f& v) const;
 	
 	//OVERLOADS
 	//Unary negation
@@ -34,13 +36,6 @@ public:
 	//Array subscripts
 	float& operator[](int idx);
 	const float& operator[](int idx) const;
-	//Equality
-	bool operator==(const Vector2f& v) const;
-	bool operator!=(const Vector2f& v) const;
-	bool operator<(const Vector2f& v) const;
-	bool operator>(const Vector2f& v) const;
-	bool operator<=(const Vector2f& v) const;
-	bool operator>=(const Vector2f& v) const;
 	
 	//SCALAR OVERLOADS
 	//Vector * Scalar

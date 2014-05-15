@@ -27,6 +27,7 @@ public:
 	void initialize();
 	void calculateVolumes();
 	void updateVelocities();
+	void updateVelocityGradients();
 	
 	//Cubic B-spline shape/basis/interpolation function
 	//A smooth curve from (0,1) to (1,0)

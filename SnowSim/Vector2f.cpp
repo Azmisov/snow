@@ -33,20 +33,26 @@ void Vector2f::setPosition(const Vector2f &v){
 void Vector2f::normalize(){
 	*this /= this->length();
 }
-float Vector2f::dot(const Vector2f &v) const{
+const float Vector2f::dot(const Vector2f &v) const{
 	return v.loc[0]*loc[0] + v.loc[1]*loc[1];
 }
-float Vector2f::sum() const{
+const float Vector2f::sum() const{
 	return loc[0] + loc[1];
 }
-float Vector2f::product() const{
+const float Vector2f::product() const{
 	return loc[0] * loc[1];
 }
-float Vector2f::length() const{
+const float Vector2f::length() const{
 	double sum = 0;
 	for (int i=0; i<2; i++)
 		sum += loc[i]*loc[i];
 	return sqrt(sum);
+}
+const Matrix2f Vector2f::trans_product(const Vector2f& v) const{
+	return Matrix2f(
+		loc[0]*v.loc[0], loc[0]*v.loc[1],
+		loc[1]*v.loc[0], loc[1]*v.loc[1]
+	);
 }
 
 //OVERLOADS
@@ -56,27 +62,6 @@ float& Vector2f::operator[](int idx){
 }
 const float& Vector2f::operator[](int idx) const{
 	return loc[idx];
-}
-//Comparisons, since floating point is a mess
-bool Vector2f::operator==(const Vector2f& v) const{
-	return fabs(loc[0] - v.loc[0]) < FLT_EPSILON &&
-		   fabs(loc[1] - v.loc[1]) < FLT_EPSILON;
-}
-bool Vector2f::operator!=(const Vector2f& v) const{
-	return !(*this == v);
-}
-bool Vector2f::operator<(const Vector2f& v) const{
-	return loc[0] + FLT_EPSILON < v.loc[0] &&
-		   loc[1] + FLT_EPSILON < v.loc[1];
-}
-bool Vector2f::operator>(const Vector2f& v) const{
-	return v < *this;
-}
-bool Vector2f::operator<=(const Vector2f& v) const{
-	return !(*this > v);
-}
-bool Vector2f::operator>=(const Vector2f& v) const{
-	return !(*this < v);
 }
 
 //SCALAR OVERLOADS

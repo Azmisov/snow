@@ -4,6 +4,8 @@
 #include <cstring>
 #include "Vector2f.h"
 
+class Vector2f;
+
 class Matrix2f {
 public:
 	//[column][row] better for cpu caching?
@@ -21,9 +23,10 @@ public:
 	void setData(const Matrix2f& m);
 	void setData(float data[2][2]);
 	void setData(const float data[2][2]);
+	void setData(float val);
 	void setData(float i11, float i12, float i21, float i22);
 	
-	float determinant() const;
+	const float determinant() const;
 	const Matrix2f transpose() const;
 	const Matrix2f inverse() const;
 	//Singular value decomposition, where this = w.diag_product(e)*v.transpose()
