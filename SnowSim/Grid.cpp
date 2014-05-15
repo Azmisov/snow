@@ -113,6 +113,6 @@ void Grid::updateVelocities(){
 			}
 		}
 		//Final velocity is a linear combination of PIC and FLIP components
-		p[i].velocity = flip*FLIP_percent + pic*(1-FLIP_percent);
+		p[i].velocity = flip*FLIP_PERCENT + pic*(1-FLIP_PERCENT);
 	}
 }

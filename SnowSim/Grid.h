@@ -3,11 +3,10 @@
 
 #include "PointCloud.h"
 #include "Vector2f.h"
+#include "SimConstants.h"
 #include <math.h>
 #include <cstring>
 #include <stdio.h>
-
-#define FLIP_percent .95
 
 typedef struct GridNode{
 	float mass;

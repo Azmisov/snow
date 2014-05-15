@@ -4,15 +4,31 @@ Matrix2f::Matrix2f(){
 	memset(data, 0, sizeof(float)*4);
 }
 Matrix2f::Matrix2f(float i11, float i12, float i21, float i22){
+	setData(i11, i12, i21, i22);
+}
+Matrix2f::Matrix2f(const Matrix2f& orig){
+	setData(orig);
+}
+Matrix2f::Matrix2f(float data[2][2]){
+	setData(data);
+}
+Matrix2f::~Matrix2f(){}
+
+void Matrix2f::setData(const Matrix2f& m){
+	setData(m.data);
+}
+void Matrix2f::setData(float data[2][2]){
+	memcpy(data, data, sizeof(float)*4);
+}
+void Matrix2f::setData(const float data[2][2]){
+	setData(data[0][0], data[1][0], data[0][1], data[1][1]);
+}
+void Matrix2f::setData(float i11, float i12, float i21, float i22){
 	data[0][0] = i11;
 	data[0][1] = i21;
 	data[1][0] = i12;
 	data[1][1] = i22;
 }
-Matrix2f::Matrix2f(const Matrix2f& orig){
-	memcpy(data, orig.data, sizeof(float)*4);
-}
-Matrix2f::~Matrix2f(){}
 
 float Matrix2f::determinant() const{
 	return data[0][0]*data[1][1] - data[0][1]*data[1][0];
@@ -39,6 +55,13 @@ void Matrix2f::diag_product(const Vector2f& v){
 	for (int i=0; i<2; i++){
 		for (int j=0; j<2; j++)
 			data[i][j] *= v[i];
+	}
+}
+//Matrix * Matrix^-1
+void Matrix2f::diag_product_inv(const Vector2f& v){
+	for (int i=0; i<2; i++){
+		for (int j=0; j<2; j++)
+			data[i][j] /= v[i];
 	}
 }
 //Matrix - Matrix

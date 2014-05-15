@@ -11,8 +11,17 @@ public:
 	
 	Matrix2f();
 	Matrix2f(float i11, float i12, float i21, float i22);
-	Matrix2f(const Matrix2f& orig);
+	Matrix2f(const Matrix2f& m);
+	Matrix2f(float data[2][2]);
 	virtual ~Matrix2f();
+	static Matrix2f identity(){
+		return Matrix2f(1, 0, 0, 1);
+	}
+	
+	void setData(const Matrix2f& m);
+	void setData(float data[2][2]);
+	void setData(const float data[2][2]);
+	void setData(float i11, float i12, float i21, float i22);
 	
 	float determinant() const;
 	const Matrix2f transpose() const;
@@ -23,6 +32,8 @@ public:
 	//DIAGONAL MATRIX OPERATIONS
 	//Matrix * Matrix
 	void diag_product(const Vector2f& v);
+	//Matrix * Matrix^-1
+	void diag_product_inv(const Vector2f& v);
 	//Matrix - Matrix
 	void diag_difference(const float& c);
 	void diag_difference(const Vector2f& v);

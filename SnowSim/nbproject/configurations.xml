@@ -9,6 +9,7 @@
       <itemPath>Matrix2f.h</itemPath>
       <itemPath>Particle.h</itemPath>
       <itemPath>PointCloud.h</itemPath>
+      <itemPath>SimConstants.h</itemPath>
       <itemPath>Vector2f.h</itemPath>
       <itemPath>main.h</itemPath>
     </logicalFolder>
@@ -82,6 +83,8 @@
       </item>
       <item path="PointCloud.h" ex="false" tool="3" flavor2="0">
       </item>
+      <item path="SimConstants.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="Vector2f.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="Vector2f.h" ex="false" tool="3" flavor2="0">
@@ -129,6 +132,8 @@
       <item path="PointCloud.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="PointCloud.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="SimConstants.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="Vector2f.cpp" ex="false" tool="1" flavor2="0">
       </item>
