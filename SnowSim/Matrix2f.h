@@ -1,14 +1,19 @@
 #ifndef MATRIX2F_H
 #define	MATRIX2F_H
 
-#include <cstring>
 #include "Vector2f.h"
+#include <cstring>
+#include <cmath>
+
+#include <iostream>
+#include <stdlib.h>
+#include <stdio.h>
 
 class Vector2f;
 
 class Matrix2f {
 public:
-	//[column][row] better for cpu caching?
+	//[column][row] (better for cpu caching?)
 	float data[2][2];
 	
 	Matrix2f();
@@ -31,6 +36,8 @@ public:
 	const Matrix2f inverse() const;
 	//Singular value decomposition, where this = w.diag_product(e)*v.transpose()
 	void svd(Matrix2f* w, Vector2f* e, Matrix2f* v) const;
+	//Make columns orthonormal
+	void normalize();
 	
 	//DIAGONAL MATRIX OPERATIONS
 	//Matrix * Matrix
@@ -69,6 +76,8 @@ public:
 	const Matrix2f operator*(const Matrix2f& m) const;
 	//Matrix * Vector
 	const Vector2f operator*(const Vector2f& v) const;
+
+	void print();
 };
 
 const Matrix2f operator/(const float& c, const Matrix2f& m);

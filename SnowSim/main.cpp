@@ -1,6 +1,7 @@
 #include "main.h"
 #include "PointCloud.h"
 #include "Grid.h"
+#include <time.h>
 
 using namespace std;
 
@@ -12,7 +13,7 @@ bool dirty_buffer = true;
 PointCloud snow;
 Grid* grid;
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv) {	
 	//Create GLFW window
 	GLFWwindow* window;
 	glfwSetErrorCallback(error_callback);
