@@ -61,7 +61,7 @@
       </toolsSet>
       <compileType>
         <linkerTool>
-          <commandLine>glfw3/libglfw3.a -lGL -lX11 -lXxf86vm -lm -lpthread -lXrandr -lXi</commandLine>
+          <commandLine>glfw3/libglfw3.a -lGL -lX11 -lXxf86vm -lm -lpthread -lXrandr -lXi -lfreeimage</commandLine>
         </linkerTool>
       </compileType>
       <item path="Collider.cpp" ex="false" tool="1" flavor2="0">

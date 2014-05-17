@@ -4,7 +4,11 @@ using namespace std;
 
 //Old and new time values for each timestep
 double old_time, new_time = glfwGetTime();
-bool dirty_buffer = true;
+bool dirty_buffer = true,
+	screencast = false;
+int frame_count = 0,
+	bsize = 3*WIN_SIZE*WIN_SIZE;
+unsigned char* img_buffer;
 
 //Simulation data
 int point_size;
@@ -42,7 +46,7 @@ int main(int argc, char** argv) {
 	
 	//Setup simulation data
 	const float mpdim = .25;		//meters in each dimension
-	const int ppdim = 20;		//particle count for each dimension
+	const int ppdim = 100;		//particle count for each dimension
 	snow = PointCloud::createSquare(mpdim, ppdim);
 	snow->translate(Vector2f(.75-mpdim/2*(ppdim != 1), 1));
 	//Adjust visualization size to fill area
@@ -52,7 +56,7 @@ int main(int argc, char** argv) {
 	else if (point_size > 20)
 		point_size = 20;
 	
-	grid = new Grid(Vector2f(0), Vector2f(WIN_METERS, WIN_METERS), Vector2f(20), snow);
+	grid = new Grid(Vector2f(0), Vector2f(WIN_METERS, WIN_METERS), Vector2f(60), snow);
 	grid->initialize();	
 	grid->calculateVolumes();	//only for first iteration
 	
@@ -61,16 +65,28 @@ int main(int argc, char** argv) {
 	pthread_create(&sim_thread, NULL, simulate, NULL);
 	
 	//Drawing & event loop
+	//Create directory to save buffers in
+	if (screencast){
+		mkdir("../screencast/",0777);
+		FreeImage_Initialise();
+		img_buffer = new unsigned char[bsize];
+	}
 	while (!glfwWindowShouldClose(window)){
 		if (dirty_buffer){
 			redraw();
 			dirty_buffer = false;
+			if (screencast)
+				save_buffer(frame_count++);
 		}
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
 
 	//Exit
+	if (screencast){
+		FreeImage_DeInitialise();
+		delete[] img_buffer;
+	}
 	glfwDestroyWindow(window);
 	glfwTerminate();
 	exit(EXIT_SUCCESS);
@@ -120,7 +136,7 @@ void *simulate(void *args){
 	sleep_duration.tv_sec = 0;
 	sleep_duration.tv_nsec = TIMESTEP*1e9;
 	
-	for (int i=0; i<250; i++){
+	for (int i=0; i<1000; i++){
 		//Initialize FEM grid
 		grid->initialize();
 		//Compute grid velocities
@@ -131,10 +147,29 @@ void *simulate(void *args){
 		snow->update();
 		//Redraw snow
 		dirty_buffer = true;
-		//Delay...
-		nanosleep(&sleep_duration, NULL);
+		//Delay... (if doing realtime visualization)
+		//nanosleep(&sleep_duration, NULL);
 	}
 
 	cout << "Simulation complete: " << (clock()-start)/CLOCKS_PER_SEC << " seconds" << endl;
 	pthread_exit(NULL);
+}
+
+void save_buffer(int time){
+	FILE *file;
+	char fname[32];
+	
+	glPixelStorei(GL_PACK_ALIGNMENT, 1);
+	sprintf(fname, "../screencast/t_%04d.png", time);
+	printf("%s\n", fname);
+	
+	//Copy the image to buffer
+	glReadBuffer(GL_BACK_LEFT);
+	glReadPixels(0, 0, WIN_SIZE, WIN_SIZE, GL_BGR, GL_UNSIGNED_BYTE, img_buffer);
+	FIBITMAP* img = FreeImage_ConvertFromRawBits(
+		img_buffer, WIN_SIZE, WIN_SIZE, 3*WIN_SIZE,
+		24, 0xFF0000, 0x00FF00, 0x0000FF, false
+	);
+	FreeImage_Save(FIF_PNG, img, fname, 0);
+	FreeImage_Unload(img);
 }

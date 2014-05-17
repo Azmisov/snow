@@ -8,6 +8,8 @@
 #include <pthread.h>
 #include <time.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <FreeImage.h>
 #include "Particle.h"
 #include "Collider.h"
 #include "PointCloud.h"
@@ -20,6 +22,7 @@ static void error_callback(int, const char*);
 void key_callback(GLFWwindow*, int, int, int, int);
 void redraw();
 void *simulate(void *args);
+void save_buffer(int time);
 
 #endif
 
