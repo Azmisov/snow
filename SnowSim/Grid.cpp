@@ -14,7 +14,7 @@ Grid::~Grid(){
 }
 
 //Maps mass and velocity to the grid
-void Grid::initializeMass(){
+void Grid::initialize(){
 	//Reset the grid
 	//If the grid is sparsely filled, it may be better to reset individual nodes
 	memset(nodes, 0, sizeof(GridNode)*size.product());
@@ -53,42 +53,18 @@ void Grid::initializeMass(){
 			}
 		}
 	}
-}
-
-void Grid::initializeVelocities(){
-	//We interpolate velocity after mass, to conserve momentum
-	for (int i=0; i<obj->size; i++){
-		Particle& p = obj->particles[i];
-		int ox = p.grid_position[0],
-			oy = p.grid_position[1];
-		for (int idx=0, x=ox-1, x_end=ox+2; x<=x_end; x++){
-			for (int y=oy-1, y_end=oy+2; y<=y_end; y++, idx++){
-				float w = p.weights[idx];
-				if (w > BSPLINE_EPSILON){
-					//Interpolate velocity
-					int n = (int) (x*size[0]+y);
-					nodes[n].velocity += p.velocity * w * (p.mass/nodes[n].mass);
-				}
-			}
-		}
-	}
 	
-	//Particles need the velocity gradient to compute stress forces
-	//This is only temporary; the actual "resolved" velocity gradient
-	//is computed in updateVelocities()
+	//We interpolate velocity afterwards, to conserve momentum
 	for (int i=0; i<obj->size; i++){
-		//Reset gradient to zero
 		Particle& p = obj->particles[i];
-		Matrix2f& grad = p.velocity_gradient;
-		grad.setData(0.0);
-		
 		int ox = p.grid_position[0],
 			oy = p.grid_position[1];
 		for (int idx=0, x=ox-1, x_end=ox+2; x<=x_end; x++){
-			for (int y=oy-1, y_end=oy+2; y<=y_end; y++, idx++){
-				float w = p.weights[idx];
-				if (w > BSPLINE_EPSILON){
-					grad += nodes[(int) (x*size[0]+y)].velocity.trans_product(p.weight_gradient[idx]);
+			for (int y=oy-1, y_end=oy+2; y<=y_end; y++){
+				int n = (int) (x*size[0]+y);
+				if (nodes[n].mass > BSPLINE_EPSILON){
+					//Interpolate velocity
+					nodes[n].velocity += p.velocity * p.weights[idx++] * (p.mass/nodes[n].mass);
 				}
 			}
 		}
@@ -108,12 +84,12 @@ void Grid::calculateVolumes() const{
 		p.density = 0;
 		for (int idx=0, x=ox-1, x_end=ox+2; x<=x_end; x++){
 			for (int y=oy-1, y_end=oy+2; y<=y_end; y++, idx++){
-				float w = p.weights[idx];
-				if (w > BSPLINE_EPSILON){
+				int n = (int) (x*size[0]+y);
+				if (nodes[n].mass > BSPLINE_EPSILON){
 					//Node density is trivial
-					float node_density = nodes[(int) (x*size[0]+y)].mass / node_volume;
+					float node_density = nodes[n].mass / node_volume;
 					//Weighted sum of nodes
-					p.density += w * node_density;
+					p.density += p.weights[idx] * node_density;
 				}
 			}
 		}
@@ -131,10 +107,9 @@ void Grid::calculateVelocities(const Vector2f& gravity){
 			oy = p.grid_position[1];
 		for (int idx=0, x=ox-1, x_end=ox+2; x<=x_end; x++){
 			for (int y=oy-1, y_end=oy+2; y<=y_end; y++, idx++){
-				float w = p.weights[idx];
-				if (w > BSPLINE_EPSILON){
+				int n = (int) (x*size[0]+y);
+				if (nodes[n].mass > BSPLINE_EPSILON){
 					//Weight the force onto nodes
-					int n = (int) (x*size[0]+y);
 					nodes[n].force += force*p.weight_gradient[idx];
 					nodes[n].has_force = true;
 				}
@@ -166,13 +141,15 @@ void Grid::updateVelocities() const{
 			oy = p.grid_position[1];
 		for (int idx=0, x=ox-1, x_end=ox+2; x<=x_end; x++){
 			for (int y=oy-1, y_end=oy+2; y<=y_end; y++, idx++){
-				float w = p.weights[idx];
-				if (w > BSPLINE_EPSILON){
-					GridNode &node = nodes[(int) (x*size[0]+y)];
+				GridNode &node = nodes[(int) (x*size[0]+y)];
+				if (node.mass > BSPLINE_EPSILON){
+					//Interpolation weight
+					float weight = p.weights[idx];				
 					//Particle in cell
-					pic += node.velocity_new*w;
+					pic += node.velocity_new*weight;
 					//Fluid implicit particle
-					flip += (node.velocity_new - node.velocity)*w;
+					flip += (node.velocity_new - node.velocity)*weight;
+
 					//Velocity gradient
 					grad += node.velocity_new.trans_product(p.weight_gradient[idx]);
 				}
@@ -180,7 +157,5 @@ void Grid::updateVelocities() const{
 		}
 		//Final velocity is a linear combination of PIC and FLIP components
 		p.velocity = flip*FLIP_PERCENT + pic*(1-FLIP_PERCENT);
-		std::cout << "Gradient = " << std::endl;
-		grad.print();
 	}
 }

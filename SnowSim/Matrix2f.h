@@ -9,8 +9,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define MATRIX_EPSILON 1e-6
-
 class Vector2f;
 
 class Matrix2f {

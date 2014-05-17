@@ -15,16 +15,7 @@ int point_size;
 PointCloud* snow;
 Grid* grid;
 
-int main(int argc, char** argv) {
-	Matrix2f w, v;
-	Vector2f e;
-	Matrix2f comp = Matrix2f(.1,17,-2,-.008);
-	comp.svd(&w, &e, &v);
-	w.diag_product(e);
-	Matrix2f res = w*v.transpose();
-	res.print();
-	return 0;
-	
+int main(int argc, char** argv) {	
 	//Create GLFW window
 	GLFWwindow* window;
 	glfwSetErrorCallback(error_callback);
@@ -55,7 +46,7 @@ int main(int argc, char** argv) {
 	
 	//Setup simulation data
 	const float mpdim = .25;		//meters in each dimension
-	const int ppdim = 2;			//particle count for each dimension
+	const int ppdim = 100;		//particle count for each dimension
 	snow = PointCloud::createSquare(mpdim, ppdim);
 	snow->translate(Vector2f(.75-mpdim/2*(ppdim != 1), 1));
 	//Adjust visualization size to fill area
@@ -66,9 +57,8 @@ int main(int argc, char** argv) {
 		point_size = 20;
 	
 	grid = new Grid(Vector2f(0), Vector2f(WIN_METERS, WIN_METERS), Vector2f(60), snow);
-	//We need to estimate particle volumes before we start
-	grid->initializeMass();	
-	grid->calculateVolumes();
+	grid->initialize();	
+	grid->calculateVolumes();	//only for first iteration
 	
 	//Create default simulation loop
 	pthread_t sim_thread;
@@ -146,11 +136,9 @@ void *simulate(void *args){
 	sleep_duration.tv_sec = 0;
 	sleep_duration.tv_nsec = TIMESTEP*1e9;
 	
-	for (int i=0; i<3; i++){
-		cout << "ITER ---- " << endl;
+	for (int i=0; i<1000; i++){
 		//Initialize FEM grid
-		grid->initializeMass();
-		grid->initializeVelocities();
+		grid->initialize();
 		//Compute grid velocities
 		grid->calculateVelocities(gravity);
 		//Map back to particles
@@ -160,7 +148,7 @@ void *simulate(void *args){
 		//Redraw snow
 		dirty_buffer = true;
 		//Delay... (if doing realtime visualization)
-		nanosleep(&sleep_duration, NULL);
+		//nanosleep(&sleep_duration, NULL);
 	}
 
 	cout << "Simulation complete: " << (clock()-start)/CLOCKS_PER_SEC << " seconds" << endl;

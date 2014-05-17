@@ -29,8 +29,7 @@ public:
 	virtual ~Grid();
 
 	//Map particles to grid
-	void initializeMass();
-	void initializeVelocities();
+	void initialize();
 	//Map grid volumes back to particles (first timestep only)
 	void calculateVolumes() const;
 	//Compute grid velocities
@@ -50,9 +49,9 @@ public:
 	//Slope of interpolation function
 	static float bsplineSlope(float x){
 		if (x < 1)
-			return x*(3/2.0*x - 2);
+			return x/2*(3*x - 4);
 		if (x < 2)
-			return x*(2 - x/2) - 2;
+			return x/2*(4 - x) - 2;
 		return 0;
 	}
 };

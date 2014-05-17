@@ -16,13 +16,13 @@
     </editor-bookmarks>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/home/isaac/Programming/C/snow/SnowSim/main.h</file>
-            <file>file:/home/isaac/Programming/C/snow/SnowSim/Grid.cpp</file>
             <file>file:/home/isaac/Programming/C/snow/SnowSim/PointCloud.h</file>
+            <file>file:/home/isaac/Programming/C/snow/SnowSim/main.cpp</file>
+            <file>file:/home/isaac/Programming/C/snow/SnowSim/Grid.cpp</file>
+            <file>file:/home/isaac/Programming/C/snow/SnowSim/PointCloud.cpp</file>
             <file>file:/home/isaac/Programming/C/snow/SnowSim/Vector2f.h</file>
             <file>file:/home/isaac/Programming/C/snow/SnowSim/Particle.cpp</file>
-            <file>file:/home/isaac/Programming/C/snow/SnowSim/main.cpp</file>
-            <file>file:/home/isaac/Programming/C/snow/SnowSim/PointCloud.cpp</file>
+            <file>file:/home/isaac/Programming/C/snow/SnowSim/main.h</file>
         </group>
     </open-files>
 </project-private>
