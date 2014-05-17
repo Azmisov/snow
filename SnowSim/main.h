@@ -9,8 +9,8 @@
 #include "Particle.h"
 #include "Collider.h"
 
-#define WIN_W 640
-#define WIN_H 640
+#define WIN_SIZE 640
+#define WIN_METERS 1.5
 
 static void error_callback(int, const char*);
 void key_callback(GLFWwindow*, int, int, int, int);

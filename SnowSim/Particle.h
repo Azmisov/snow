@@ -11,8 +11,8 @@ public:
 	float volume, mass, density;
 	Vector2f position, velocity;
 	Matrix2f velocity_gradient;
-	//Lame parameters
-	float lambda, mu;
+	//Lame parameters (_s denotes starting configuration)
+	float lambda_s, lambda, mu_s, mu;
 	//Deformation gradient (elastic and plastic parts)
 	Matrix2f def_elastic, def_plastic;
 	//Cached SVD's for elastic deformation gradient
@@ -29,11 +29,13 @@ public:
 	Particle(const Particle& orig);
 	virtual ~Particle();
 
+	//Update position, based on velocity
+	void updatePos();
 	//Computes various intermediate data to speed up future calculations
 	void updateSVD();
 	void updateDet();
 	//Update deformation gradient
-	void gradientUpdate();
+	void updateGradient();
 	//Compute stress force; call after updateSVD() and updateDet()
 	Matrix2f stressForce() const;
 };

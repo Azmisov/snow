@@ -8,10 +8,14 @@
 #include <cstring>
 #include <stdio.h>
 
+const float BSPLINE_EPSILON = 1e-6;
+
 typedef struct GridNode{
 	float mass;
-	Vector2f velocity;
-	Vector2f velocity_new;
+	bool has_force;
+	Vector2f force,
+		velocity,
+		velocity_new;
 } GridNode;
 
 class Grid {
@@ -24,27 +28,29 @@ public:
 	Grid(const Grid& orig);
 	virtual ~Grid();
 
+	//Map particles to grid
 	void initialize();
-	void calculateVolumes();
-	void updateVelocities();
-	void updateVelocityGradients();
+	//Map grid volumes back to particles (first timestep only)
+	void calculateVolumes() const;
+	//Compute grid velocities
+	void calculateVelocities(const Vector2f& extern_forces);
+	//Map grid velocities back to particles
+	void updateVelocities() const;
 	
 	//Cubic B-spline shape/basis/interpolation function
 	//A smooth curve from (0,1) to (1,0)
 	static float bspline(float x){
-		x = fabs(x);
 		if (x < 1)
-			return x*x*(x/2 - 1) + 2/3;
-		if (1 <= x && x < 2)
-			return x*(x*(-x/6 + 1) - 2) + 4/3;
+			return x*x*(x/2 - 1) + 2/3.0;
+		if (x < 2)
+			return x*(x*(-x/6 + 1) - 2) + 4/3.0;
 		return 0;
 	}
 	//Slope of interpolation function
 	static float bsplineSlope(float x){
-		x = fabs(x);
 		if (x < 1)
 			return x/2*(3*x - 4);
-		if (1 <= x && x < 2)
+		if (x < 2)
 			return x/2*(4 - x) - 2;
 		return 0;
 	}

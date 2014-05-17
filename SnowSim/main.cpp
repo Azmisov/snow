@@ -10,6 +10,7 @@ double old_time, new_time = glfwGetTime();
 bool dirty_buffer = true;
 
 //Simulation data
+int point_size;
 PointCloud snow;
 Grid* grid;
 
@@ -19,7 +20,7 @@ int main(int argc, char** argv) {
 	glfwSetErrorCallback(error_callback);
 	if (!glfwInit())
 		exit(EXIT_FAILURE);
-	window = glfwCreateWindow(WIN_W, WIN_H, "Snow Simulator", NULL, NULL);
+	window = glfwCreateWindow(WIN_SIZE, WIN_SIZE, "Snow Simulator", NULL, NULL);
 	if (!window){
 		glfwTerminate();
 		exit(EXIT_FAILURE);
@@ -29,25 +30,32 @@ int main(int argc, char** argv) {
 	
 	//Center window on screen
 	const GLFWvidmode* monitor = glfwGetVideoMode(glfwGetPrimaryMonitor());
-	glfwSetWindowPos(window, (monitor->width-WIN_W)/2, (monitor->height-WIN_H)/2);
+	glfwSetWindowPos(window, (monitor->width-WIN_SIZE)/2, (monitor->height-WIN_SIZE)/2);
 	
 	//Setup OpenGL context
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	glViewport(0, 0, WIN_W, WIN_H);
-	glOrtho(0, WIN_W, 0, WIN_H, 0, 1);
+	glViewport(0, 0, WIN_SIZE, WIN_SIZE);
+	glOrtho(0, WIN_METERS, 0, WIN_METERS, 0, 1);
 	
 	//Set default visualization parameters
 	glClearColor(1, 1, 1, 1);
 	
 	//Setup simulation data
-	snow = *PointCloud::createSquare(1.5, 20);
-	snow.scale(Vector2f(0), Vector2f(7));
-	snow.translate(Vector2f(230, 400));
+	const float mpdim = .25;		//meters in each dimension
+	const int ppdim = 1;		//particle count for each dimension
+	snow = *PointCloud::createSquare(mpdim, ppdim);
+	snow.translate(Vector2f(.75-mpdim/2*(ppdim != 1), 1));
+	//Adjust visualization size to fill area
+	point_size = WIN_SIZE/WIN_METERS*mpdim/ppdim-1;
+	if (point_size < 1)
+		point_size = 1;
+	else if (point_size > 20)
+		point_size = 20;
 	
-	grid = new Grid(Vector2f(0), Vector2f(WIN_W, WIN_H), Vector2f(60), &snow);
+	grid = new Grid(Vector2f(0), Vector2f(WIN_METERS, WIN_METERS), Vector2f(60), &snow);
 	grid->initialize();	
 	grid->calculateVolumes();	//only for first iteration
 	
@@ -84,11 +92,10 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
 void redraw(){
 	glClear(GL_COLOR_BUFFER_BIT);
-	glEnable(GL_POINT_SMOOTH);
 		
 	//Grid nodes
+	glPointSize(1);
 	glColor3f(1, 0, 0);
-	glPointSize(2);
 	glBegin(GL_POINTS);
 	for (int i=0; i<grid->size[0]; i++){
 		for (int j=0; j<grid->size[1]; j++)
@@ -97,15 +104,34 @@ void redraw(){
 	glEnd();
 	
 	//Snow particles
+	glEnable(GL_POINT_SMOOTH);
 	glColor3f(0, 0, 1);
-	glPointSize(4);
+	glPointSize(point_size);
 	glBegin(GL_POINTS);
 	for (int i=0; i<snow.size; i++)
 		glVertex2fv(snow.particles[i].position.loc);
 	glEnd();
+	glDisable(GL_POINT_SMOOTH);
 }
 
 void *simulate(void *args){
-	cout << "Starting simulation thread..." << endl;
+	clock_t start = clock();
+	cout << "Starting simulation..." << endl;
+	Vector2f gravity = Vector2f(0, -9.8);
+
+	for (int i=0; i<1; i++){
+		//Initialize FEM grid
+		grid->initialize();
+		//Compute grid velocities
+		grid->calculateVelocities(gravity);
+		//Map back to particles
+		grid->updateVelocities();
+		//Update particle data
+		//snow.update();
+		//Redraw snow
+		dirty_buffer = true;
+	}
+
+	cout << "Simulation complete: " << (clock()-start)/CLOCKS_PER_SEC << " seconds" << endl;
 	pthread_exit(NULL);
 }

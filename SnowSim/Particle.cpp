@@ -4,6 +4,10 @@ Particle::Particle(){}
 Particle::Particle(const Particle& orig){}
 Particle::~Particle(){}
 
+void Particle::updatePos(){
+	//Simple euler integration
+	position += TIMESTEP*velocity;
+}
 void Particle::updateSVD(){
 	def_elastic.svd(&svd_w, &svd_e, &svd_v);
 	//Clamp singular values to within elastic region
@@ -18,7 +22,7 @@ void Particle::updateDet(){
 	det_elastic = def_elastic.determinant();
 	det_plastic = def_plastic.determinant();
 }
-void Particle::gradientUpdate(){
+void Particle::updateGradient(){
 	//So, initially we make all updates elastic
 	Matrix2f dx = TIMESTEP*velocity_gradient;
 	dx.diag_sum(1);
@@ -39,8 +43,10 @@ void Particle::gradientUpdate(){
 	def_elastic = w_cpy*svd_v.transpose();
 	
 	//Update lame parameters to account for hardening
-	//TODO:
-	
+	updateDet();
+	float scale = exp(HARDENING*(1-det_plastic));
+	mu = mu_s*scale;
+	lambda = lambda_s*scale;
 }
 Matrix2f Particle::stressForce() const{
 	/* Stress force on each particle is: -volume*cauchy_stress

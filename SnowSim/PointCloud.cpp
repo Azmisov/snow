@@ -17,6 +17,12 @@ void PointCloud::translate(Vector2f off){
 		particles[i].position[1] += off[1];
 	}
 }
+void PointCloud::update(){
+	for (int i=0; i<size; i++){
+		particles[i].updatePos();
+		particles[i].updateGradient();
+	}
+}
 void PointCloud::bounds(float bounds[4]){
 	bounds[0] = particles[0].position[0]; bounds[1] = bounds[0];
 	bounds[2] = particles[0].position[1]; bounds[3] = bounds[2];
