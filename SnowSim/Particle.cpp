@@ -1,7 +1,22 @@
 #include "Particle.h"
 
 Particle::Particle(){}
-Particle::Particle(const Particle& orig){}
+Particle::Particle(const Vector2f& pos, const Vector2f& vel, float mass, float lame_lambda, float lame_mu){
+	position.setPosition(pos);
+	velocity.setPosition(vel);
+	this->mass = mass;
+	lambda_s = lame_lambda;
+	mu_s = lame_mu;
+	//To start out with, we assume the deformation gradient is zero
+	//Or in other words, all particle velocities are the same
+	def_elastic.loadIdentity();
+	def_plastic.loadIdentity();
+	det_elastic = 1;
+	det_plastic = 1;
+	svd_e.setPosition(1, 1);
+	svd_w.setData(0, 1, 1, 0);
+	svd_v.setData(0, 1, 1, 0);
+}
 Particle::~Particle(){}
 
 void Particle::updatePos(){

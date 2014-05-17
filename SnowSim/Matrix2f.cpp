@@ -12,6 +12,9 @@ Matrix2f::Matrix2f(float data[2][2]){
 }
 Matrix2f::~Matrix2f(){}
 
+void Matrix2f::loadIdentity(){
+	setData(1, 0, 0, 1);
+}
 void Matrix2f::setData(const Matrix2f& m){
 	setData(m.data);
 }

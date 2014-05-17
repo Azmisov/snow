@@ -6,8 +6,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
+#include <time.h>
+#include <unistd.h>
 #include "Particle.h"
 #include "Collider.h"
+#include "PointCloud.h"
+#include "Grid.h"
 
 #define WIN_SIZE 640
 #define WIN_METERS 1.5

@@ -1,6 +1,10 @@
 #include "PointCloud.h"
 
 PointCloud::PointCloud(){}
+PointCloud::PointCloud(int cloud_size){
+	size = cloud_size;
+	particles.reserve(size);
+}
 PointCloud::PointCloud(const PointCloud& orig){}
 PointCloud::~PointCloud(){}
 

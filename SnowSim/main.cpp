@@ -1,7 +1,4 @@
 #include "main.h"
-#include "PointCloud.h"
-#include "Grid.h"
-#include <time.h>
 
 using namespace std;
 
@@ -11,7 +8,7 @@ bool dirty_buffer = true;
 
 //Simulation data
 int point_size;
-PointCloud snow;
+PointCloud* snow;
 Grid* grid;
 
 int main(int argc, char** argv) {	
@@ -45,9 +42,9 @@ int main(int argc, char** argv) {
 	
 	//Setup simulation data
 	const float mpdim = .25;		//meters in each dimension
-	const int ppdim = 1;		//particle count for each dimension
-	snow = *PointCloud::createSquare(mpdim, ppdim);
-	snow.translate(Vector2f(.75-mpdim/2*(ppdim != 1), 1));
+	const int ppdim = 20;		//particle count for each dimension
+	snow = PointCloud::createSquare(mpdim, ppdim);
+	snow->translate(Vector2f(.75-mpdim/2*(ppdim != 1), 1));
 	//Adjust visualization size to fill area
 	point_size = WIN_SIZE/WIN_METERS*mpdim/ppdim-1;
 	if (point_size < 1)
@@ -55,7 +52,7 @@ int main(int argc, char** argv) {
 	else if (point_size > 20)
 		point_size = 20;
 	
-	grid = new Grid(Vector2f(0), Vector2f(WIN_METERS, WIN_METERS), Vector2f(60), &snow);
+	grid = new Grid(Vector2f(0), Vector2f(WIN_METERS, WIN_METERS), Vector2f(20), snow);
 	grid->initialize();	
 	grid->calculateVolumes();	//only for first iteration
 	
@@ -108,8 +105,8 @@ void redraw(){
 	glColor3f(0, 0, 1);
 	glPointSize(point_size);
 	glBegin(GL_POINTS);
-	for (int i=0; i<snow.size; i++)
-		glVertex2fv(snow.particles[i].position.loc);
+	for (int i=0; i<snow->size; i++)
+		glVertex2fv(snow->particles[i].position.loc);
 	glEnd();
 	glDisable(GL_POINT_SMOOTH);
 }
@@ -119,7 +116,11 @@ void *simulate(void *args){
 	cout << "Starting simulation..." << endl;
 	Vector2f gravity = Vector2f(0, -9.8);
 
-	for (int i=0; i<1; i++){
+	struct timespec sleep_duration;
+	sleep_duration.tv_sec = 0;
+	sleep_duration.tv_nsec = TIMESTEP*1e9;
+	
+	for (int i=0; i<250; i++){
 		//Initialize FEM grid
 		grid->initialize();
 		//Compute grid velocities
@@ -127,9 +128,11 @@ void *simulate(void *args){
 		//Map back to particles
 		grid->updateVelocities();
 		//Update particle data
-		//snow.update();
+		snow->update();
 		//Redraw snow
 		dirty_buffer = true;
+		//Delay...
+		nanosleep(&sleep_duration, NULL);
 	}
 
 	cout << "Simulation complete: " << (clock()-start)/CLOCKS_PER_SEC << " seconds" << endl;

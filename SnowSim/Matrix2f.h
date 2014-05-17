@@ -24,7 +24,8 @@ public:
 	static Matrix2f identity(){
 		return Matrix2f(1, 0, 0, 1);
 	}
-	
+
+	void loadIdentity();
 	void setData(const Matrix2f& m);
 	void setData(float data[2][2]);
 	void setData(const float data[2][2]);

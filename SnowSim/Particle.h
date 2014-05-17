@@ -24,9 +24,9 @@ public:
 	Vector2f grid_position;
 	Vector2f weight_gradient[16];
 	float weights[16];
-	
+
 	Particle();
-	Particle(const Particle& orig);
+	Particle(const Vector2f& pos, const Vector2f& vel, float mass, float lambda, float mu);
 	virtual ~Particle();
 
 	//Update position, based on velocity

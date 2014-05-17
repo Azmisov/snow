@@ -8,9 +8,10 @@
 class PointCloud {
 public:
 	int size;
-	Particle* particles;
-	
+	std::vector<Particle> particles;
+
 	PointCloud();
+	PointCloud(int cloud_size);
 	PointCloud(const PointCloud& orig);
 	virtual ~PointCloud();
 	
@@ -25,9 +26,7 @@ public:
 	
 	//Generate square of particles (starting at 0,0 spaced 1 unit apart)
 	static PointCloud* createSquare(float mpdim, int ppdim){
-		PointCloud *obj = new PointCloud();
-		obj->size = ppdim*ppdim;
-		obj->particles = new Particle[obj->size];
+		PointCloud *obj = new PointCloud(ppdim*ppdim);
 
 		float spacing = ppdim == 1 ? 0 : mpdim/(ppdim-1);
 		//point cloud definition; simple square
@@ -39,12 +38,10 @@ public:
 			mu = YOUNGS_MODULUS/(2+2*POISSONS_RATIO);
 		for (int x=0, n=0; x<ppdim; x++){
 			for (int y=0; y<ppdim; y++){
-				Particle &p = obj->particles[n++];
-				p.position.setPosition(x*spacing, y*spacing);
-				p.velocity.setPosition(0);
-				p.lambda_s = lambda;
-				p.mu_s = mu;
-				p.mass = m;
+				obj->particles.push_back(Particle(
+					Vector2f(x*spacing, y*spacing),
+					Vector2f(0), m, lambda, mu
+				));
 			}
 		}
 		return obj;
