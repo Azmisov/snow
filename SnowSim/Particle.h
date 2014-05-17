@@ -31,13 +31,10 @@ public:
 
 	//Update position, based on velocity
 	void updatePos();
-	//Computes various intermediate data to speed up future calculations
-	void updateSVD();
-	void updateDet();
 	//Update deformation gradient
 	void updateGradient();
 	//Compute stress force; call after updateSVD() and updateDet()
-	Matrix2f stressForce() const;
+	Matrix2f stressForce();
 };
 
 #endif

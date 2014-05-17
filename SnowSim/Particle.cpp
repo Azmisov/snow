@@ -20,10 +20,20 @@ Particle::Particle(const Vector2f& pos, const Vector2f& vel, float mass, float l
 Particle::~Particle(){}
 
 void Particle::updatePos(){
+	std::cout << velocity[0] << ", " << velocity[1] << std::endl;
 	//Simple euler integration
 	position += TIMESTEP*velocity;
 }
-void Particle::updateSVD(){
+void Particle::updateGradient(){
+	//So, initially we make all updates elastic
+	velocity_gradient *= TIMESTEP;
+	velocity_gradient.diag_sum(1);
+	def_elastic.setData(velocity_gradient * def_elastic);
+	Matrix2f f_all = def_elastic * def_plastic;
+	
+	//We compute the SVD decomposition
+	//The singular values (basically a scale transform) tell us if 
+	//the particle has exceeded critical stretch/compression
 	def_elastic.svd(&svd_w, &svd_e, &svd_v);
 	//Clamp singular values to within elastic region
 	for (int i=0; i<2; i++){
@@ -32,22 +42,6 @@ void Particle::updateSVD(){
 		else if (svd_e[i] > CRIT_STRETCH)
 			svd_e[i] = CRIT_STRETCH;
 	}
-}
-void Particle::updateDet(){
-	det_elastic = def_elastic.determinant();
-	det_plastic = def_plastic.determinant();
-}
-void Particle::updateGradient(){
-	//So, initially we make all updates elastic
-	Matrix2f dx = TIMESTEP*velocity_gradient;
-	dx.diag_sum(1);
-	def_elastic.setData(def_elastic * dx);
-	Matrix2f f_all = def_elastic * def_plastic;
-	
-	//We compute the SVD decomposition
-	//The singular values (basically a scale transform) tell us if 
-	//the particle has exceeded critical stretch/compression
-	updateSVD();
 	
 	//Recompute elastic and plastic gradient
 	//We're basically just putting the SVD back together again
@@ -58,15 +52,16 @@ void Particle::updateGradient(){
 	def_elastic = w_cpy*svd_v.transpose();
 	
 	//Update lame parameters to account for hardening
-	updateDet();
+	det_elastic = def_elastic.determinant();
+	det_plastic = def_plastic.determinant();
 	float scale = exp(HARDENING*(1-det_plastic));
 	mu = mu_s*scale;
 	lambda = lambda_s*scale;
 }
-Matrix2f Particle::stressForce() const{
+Matrix2f Particle::stressForce(){
 	/* Stress force on each particle is: -volume*cauchy_stress
 		We transfer the force to the FEM grid using the shape function gradient
-		cauchy_stress = (2u(Fe - Re)*Fe^T + y(Je - 1)Je*I)/J
+		cauchy_stress can be computed via: (2u(Fe - Re)*Fe^T + y(Je - 1)Je*I)/J
 			I: identity matrix
 			Fe: elastic deformation gradient
 			Fp: plastic deformation gradient
@@ -75,14 +70,27 @@ Matrix2f Particle::stressForce() const{
 			J: determinant of Fe*Fp
 			Je: determinant of Fe
 			u/y: Lame parameters
+		In this particlar case, however, we adjust so it only computes internal forces
+			(1/J) * [2u(Fe' - Re') + y(Je' - 1)Je'*Fe'^-T] * Fe^T
+		We define Fe' = X*Fe (the same way we do in updateGradient()),
+		such that X = (I + TIMESTEP*weight_gradient).
 	*/
-	//I move all scalar operations to the left, to reduce Matrix-Scalar operations
-	float j = det_elastic*det_plastic,
-		pc = lambda*det_elastic*(det_elastic-1);
-	Matrix2f fet = def_elastic.transpose(),
-			stress = 2*mu*(def_elastic - svd_w*svd_v.transpose())*fet;
-	stress.diag_sum(pc);
+	//First compute temporary elastic deformation gradient for next timestep
+	velocity_gradient *= TIMESTEP;
+	velocity_gradient.diag_sum(1);
+	Matrix2f fep = velocity_gradient * def_elastic,
+			fep_inv_trans = fep.inverse();
+	fep_inv_trans.transpose();
+	float fe_det = fep.determinant();
+	//Compute SVD of temporary Fe
+	//We'll use the member variables of the class, since they aren't being used
+	fep.svd(&svd_w, &svd_e, &svd_v);
+	//Now put it all together
+	fep -= svd_w*svd_v.transpose();
+	fep *= 2*mu;
+	fep_inv_trans *= lambda*fe_det*(fe_det-1);
+	fep += fep_inv_trans;
 	//Final force
-	return -volume/j*stress;
+	return -volume/(det_elastic*det_plastic) * fep * def_elastic.transpose();
 }
 
