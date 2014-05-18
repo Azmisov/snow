@@ -57,7 +57,7 @@ void Particle::updateGradient(){
 	mu = mu_s*scale;
 	lambda = lambda_s*scale;
 }
-Matrix2f Particle::stressForce(){
+Matrix2f Particle::cauchyStress(){
 	/* Stress force on each particle is: -volume*cauchy_stress
 		We transfer the force to the FEM grid using the shape function gradient
 		cauchy_stress can be computed via: (2u(Fe - Re)*Fe^T + y(Je - 1)Je*I)/J
@@ -81,7 +81,7 @@ Matrix2f Particle::stressForce(){
 	Matrix2f temp = def_elastic - svd_w*svd_v.transpose();
 	temp *= 2*mu;
 	Matrix2f temp2 = temp*def_elastic.transpose();
-	temp2.diag_difference(lambda*det_elastic*(det_elastic-1));
+	temp2.diag_sum(lambda*det_elastic*(det_elastic-1));
 	return -volume * temp2;
 	
 	/* For implicit solution only:

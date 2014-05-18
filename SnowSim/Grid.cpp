@@ -127,7 +127,7 @@ void Grid::calculateVelocities(const Vector2f& gravity){
 	for (int i=0; i<obj->size; i++){
 		Particle& p = obj->particles[i];
 		//Solve for grid internal forces
-		Matrix2f force = p.stressForce();
+		Matrix2f force = p.cauchyStress();
 		int ox = p.grid_position[0],
 			oy = p.grid_position[1];
 		for (int idx=0, y=oy-1, y_end=oy+2; y<=y_end; y++){
@@ -157,7 +157,7 @@ void Grid::calculateVelocities(const Vector2f& gravity){
 void Grid::collisionResponse(){
 	//We use border cells as boundary elements
 	//Number of boundary layers is customizable
-	for (int layer=0; layer<3; layer++){
+	for (int layer=0; layer<4; layer++){
 		//Offset to bottom/right
 		int bottom_row = size[0]*layer,
 			top_row = size[0]*(size[1]-layer-1),
@@ -166,7 +166,7 @@ void Grid::collisionResponse(){
 		for (int i=layer; i<size[0]-layer; i++){
 			//Bottom border
 			float& vt = nodes[bottom_row+i].velocity_new[1];
-			if (vt < 0) vt = -vt;
+			if (vt < 0) vt = 0;
 			//Top border
 			float& vb = nodes[top_row+i].velocity_new[1];
 			if (vb > 0) vb = -vb;

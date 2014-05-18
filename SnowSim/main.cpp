@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
 	else if (point_size > 20)
 		point_size = 20;
 	
-	grid = new Grid(Vector2f(0), Vector2f(WIN_METERS, WIN_METERS), Vector2f(60), snow);
+	grid = new Grid(Vector2f(0), Vector2f(WIN_METERS, WIN_METERS), Vector2f(100), snow);
 	//We need to estimate particle volumes before we start
 	grid->initializeMass();	
 	grid->calculateVolumes();

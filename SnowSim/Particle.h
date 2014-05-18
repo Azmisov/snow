@@ -33,8 +33,8 @@ public:
 	void updatePos();
 	//Update deformation gradient
 	void updateGradient();
-	//Compute stress force; call after updateSVD() and updateDet()
-	Matrix2f stressForce();
+	//Compute stress tensor
+	Matrix2f cauchyStress();
 };
 
 #endif
