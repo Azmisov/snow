@@ -80,7 +80,7 @@ public:
 	//Matrix * Vector
 	const Vector2f operator*(const Vector2f& v) const;
 
-	void print();
+	void print() const;
 };
 
 const Matrix2f operator/(const float& c, const Matrix2f& m);
@@ -89,4 +89,3 @@ const Matrix2f operator+(const float& c, const Matrix2f& m);
 const Matrix2f operator-(const float& c, const Matrix2f& m);
 
 #endif
-

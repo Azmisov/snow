@@ -2,7 +2,7 @@
 #define	SIMCONSTANTS_H
 
 static const float
-	TIMESTEP = .01,
+	TIMESTEP = .001,
 	FLIP_PERCENT = .95,			//Weight to give FLIP update over PIC
 	CRIT_COMPRESS = .975,		//Fracture threshold for compression
 	CRIT_STRETCH = 1.0075,		//Fracture threshold for stretching

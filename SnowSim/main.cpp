@@ -16,15 +16,6 @@ PointCloud* snow;
 Grid* grid;
 
 int main(int argc, char** argv) {
-	Matrix2f w, v;
-	Vector2f e;
-	Matrix2f comp = Matrix2f(.1,17,-2,-.008);
-	comp.svd(&w, &e, &v);
-	w.diag_product(e);
-	Matrix2f res = w*v.transpose();
-	res.print();
-	return 0;
-	
 	//Create GLFW window
 	GLFWwindow* window;
 	glfwSetErrorCallback(error_callback);
@@ -55,7 +46,7 @@ int main(int argc, char** argv) {
 	
 	//Setup simulation data
 	const float mpdim = .25;		//meters in each dimension
-	const int ppdim = 2;			//particle count for each dimension
+	const int ppdim = 100;			//particle count for each dimension
 	snow = PointCloud::createSquare(mpdim, ppdim);
 	snow->translate(Vector2f(.75-mpdim/2*(ppdim != 1), 1));
 	//Adjust visualization size to fill area
@@ -146,8 +137,9 @@ void *simulate(void *args){
 	sleep_duration.tv_sec = 0;
 	sleep_duration.tv_nsec = TIMESTEP*1e9;
 	
-	for (int i=0; i<3; i++){
-		cout << "ITER ---- " << endl;
+	while(true){
+	//for (int i=0; i<5; i++){
+		//cout << "ITER ---- " << endl;
 		//Initialize FEM grid
 		grid->initializeMass();
 		grid->initializeVelocities();
@@ -163,7 +155,7 @@ void *simulate(void *args){
 		nanosleep(&sleep_duration, NULL);
 	}
 
-	cout << "Simulation complete: " << (clock()-start)/CLOCKS_PER_SEC << " seconds" << endl;
+	cout << "Simulation complete: " << (clock()-start)/(float) CLOCKS_PER_SEC << " seconds" << endl;
 	pthread_exit(NULL);
 }
 

@@ -20,7 +20,6 @@ Particle::Particle(const Vector2f& pos, const Vector2f& vel, float mass, float l
 Particle::~Particle(){}
 
 void Particle::updatePos(){
-	std::cout << velocity[0] << ", " << velocity[1] << std::endl;
 	//Simple euler integration
 	position += TIMESTEP*velocity;
 }
@@ -70,11 +69,22 @@ Matrix2f Particle::stressForce(){
 			J: determinant of Fe*Fp
 			Je: determinant of Fe
 			u/y: Lame parameters
-		In this particlar case, however, we adjust so it only computes internal forces
+	 
+		For an implicit solution, we also need to calculate the forces with unresolved velocities:
 			(1/J) * [2u(Fe' - Re') + y(Je' - 1)Je'*Fe'^-T] * Fe^T
 		We define Fe' = X*Fe (the same way we do in updateGradient()),
 		such that X = (I + TIMESTEP*weight_gradient).
+
+		Note: volume = volume_initial*J, so the J drops out
 	*/
+	
+	Matrix2f temp = def_elastic - svd_w*svd_v.transpose();
+	temp *= 2*mu;
+	Matrix2f temp2 = temp*def_elastic.transpose();
+	temp2.diag_difference(lambda*det_elastic*(det_elastic-1));
+	return -volume * temp2;
+	
+	/* For implicit solution only:
 	//First compute temporary elastic deformation gradient for next timestep
 	velocity_gradient *= TIMESTEP;
 	velocity_gradient.diag_sum(1);
@@ -83,7 +93,7 @@ Matrix2f Particle::stressForce(){
 	fep_inv_trans.transpose();
 	float fe_det = fep.determinant();
 	//Compute SVD of temporary Fe
-	//We'll use the member variables of the class, since they aren't being used
+	//We'll use the member variables of the class, since they aren't being used anymore
 	fep.svd(&svd_w, &svd_e, &svd_v);
 	//Now put it all together
 	fep -= svd_w*svd_v.transpose();
@@ -91,6 +101,6 @@ Matrix2f Particle::stressForce(){
 	fep_inv_trans *= lambda*fe_det*(fe_det-1);
 	fep += fep_inv_trans;
 	//Final force
-	return -volume/(det_elastic*det_plastic) * fep * def_elastic.transpose();
+	return -volume * fep * def_elastic.transpose();
+	//*/
 }
-

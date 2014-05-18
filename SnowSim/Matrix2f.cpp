@@ -253,7 +253,7 @@ const Vector2f Matrix2f::operator*(const Vector2f& v) const{
 	);
 }
 
-void Matrix2f::print(){
+void Matrix2f::print() const{
 	std::cout << data[0][0] << ",\t" << data[1][0] << std::endl <<
 		data[0][1] << ",\t" << data[1][1] << std::endl;
 }

@@ -54,7 +54,6 @@ void Grid::initializeMass(){
 		}
 	}
 }
-
 void Grid::initializeVelocities(){
 	//We interpolate velocity after mass, to conserve momentum
 	for (int i=0; i<obj->size; i++){
@@ -73,6 +72,7 @@ void Grid::initializeVelocities(){
 		}
 	}
 	
+	/* Implicit update only:
 	//Particles need the velocity gradient to compute stress forces
 	//This is only temporary; the actual "resolved" velocity gradient
 	//is computed in updateVelocities()
@@ -93,13 +93,15 @@ void Grid::initializeVelocities(){
 			}
 		}
 	}
+	*/
 }
 //Maps volume from the grid to particles
 //This should only be called once, at the beginning of the simulation
 void Grid::calculateVolumes() const{
 	//Estimate each particles volume (for force calculations)
 	//TODO: I multiply by 1.435 because this calculation is underestimating the actual volume; not sure why ????
-	float node_volume = (1.435*cellsize).product();
+	//float node_volume = (1.435*cellsize).product();
+	float node_volume = cellsize.product();
 	for (int i=0; i<obj->size; i++){
 		Particle& p = obj->particles[i];
 		int ox = p.grid_position[0],
@@ -111,12 +113,11 @@ void Grid::calculateVolumes() const{
 				float w = p.weights[idx];
 				if (w > BSPLINE_EPSILON){
 					//Node density is trivial
-					float node_density = nodes[(int) (x*size[0]+y)].mass / node_volume;
-					//Weighted sum of nodes
-					p.density += w * node_density;
+					p.density += w * nodes[(int) (x*size[0]+y)].mass;
 				}
 			}
 		}
+		p.density /= node_volume;
 		//Volume for each particle can be found from density
 		p.volume = p.mass / p.density;
 	}
@@ -146,7 +147,7 @@ void Grid::calculateVelocities(const Vector2f& gravity){
 		GridNode &node = nodes[i];
 		//Check to see if this node needs to be computed
 		if (node.has_force){
-			node.velocity_new = node.velocity + TIMESTEP*(node.force/node.mass+gravity);
+			node.velocity_new = node.velocity + TIMESTEP*(node.force/node.mass + gravity);
 			node.force.setPosition(0);
 			node.has_force = false;
 		}
@@ -180,7 +181,5 @@ void Grid::updateVelocities() const{
 		}
 		//Final velocity is a linear combination of PIC and FLIP components
 		p.velocity = flip*FLIP_PERCENT + pic*(1-FLIP_PERCENT);
-		std::cout << "Gradient = " << std::endl;
-		grad.print();
 	}
 }
