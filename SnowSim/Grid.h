@@ -21,9 +21,11 @@ typedef struct GridNode{
 class Grid {
 public:
 	Vector2f origin, size, cellsize;
-	GridNode* nodes;
+	GridNode* nodes; //use (y*size[0] + x) to index, where zero is the bottom-left corner
 	PointCloud* obj;
+	float node_volume;
 	
+	//Grid be at least one cell; there must be one layer of cells surrounding all particles
 	Grid(Vector2f pos, Vector2f dims, Vector2f cells, PointCloud* obj);
 	Grid(const Grid& orig);
 	virtual ~Grid();
@@ -35,6 +37,8 @@ public:
 	void calculateVolumes() const;
 	//Compute grid velocities
 	void calculateVelocities(const Vector2f& gravity);
+	//Resolve collisions, using grid boundary nodes as colliders
+	void collisionResponse();
 	//Map grid velocities back to particles
 	void updateVelocities() const;
 	

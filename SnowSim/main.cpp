@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
 	
 	//Setup simulation data
 	const float mpdim = .25;		//meters in each dimension
-	const int ppdim = 100;			//particle count for each dimension
+	const int ppdim = 60;			//particle count for each dimension
 	snow = PointCloud::createSquare(mpdim, ppdim);
 	snow->translate(Vector2f(.75-mpdim/2*(ppdim != 1), 1));
 	//Adjust visualization size to fill area
@@ -119,11 +119,16 @@ void redraw(){
 	
 	//Snow particles
 	glEnable(GL_POINT_SMOOTH);
-	glColor3f(0, 0, 1);
 	glPointSize(point_size);
 	glBegin(GL_POINTS);
-	for (int i=0; i<snow->size; i++)
-		glVertex2fv(snow->particles[i].position.loc);
+	for (int i=0; i<snow->size; i++){
+		Particle& p = snow->particles[i];
+		//We can use the particle's density to vary color
+		//Max density set to 400
+		float density = 1 - p.density/400;
+		glColor3f(0, density < 0 ? 0 : density, 1);
+		glVertex2fv(p.position.loc);
+	}
 	glEnd();
 	glDisable(GL_POINT_SMOOTH);
 }
@@ -138,13 +143,13 @@ void *simulate(void *args){
 	sleep_duration.tv_nsec = TIMESTEP*1e9;
 	
 	while(true){
-	//for (int i=0; i<5; i++){
-		//cout << "ITER ---- " << endl;
+	//for (int i=0; i<550; i++){
 		//Initialize FEM grid
 		grid->initializeMass();
 		grid->initializeVelocities();
 		//Compute grid velocities
 		grid->calculateVelocities(gravity);
+		grid->collisionResponse();
 		//Map back to particles
 		grid->updateVelocities();
 		//Update particle data
@@ -152,7 +157,7 @@ void *simulate(void *args){
 		//Redraw snow
 		dirty_buffer = true;
 		//Delay... (if doing realtime visualization)
-		nanosleep(&sleep_duration, NULL);
+		//nanosleep(&sleep_duration, NULL);
 	}
 
 	cout << "Simulation complete: " << (clock()-start)/(float) CLOCKS_PER_SEC << " seconds" << endl;

@@ -7,6 +7,8 @@ Grid::Grid(Vector2f pos, Vector2f dims, Vector2f cells, PointCloud* object){
 	size = cells+1;
 	int len = size.product();
 	nodes = new GridNode[len];
+	//TODO: this is underestimating? perhaps we can scale by 1.435
+	node_volume = cellsize.product();
 }
 Grid::Grid(const Grid& orig){}
 Grid::~Grid(){
@@ -30,16 +32,17 @@ void Grid::initializeMass(){
 		
 		//Shape function gives a blending radius of two;
 		//so we do computations within a 2x2 square for each particle
-		for (int idx=0, x=ox-1, x_end=ox+2; x<=x_end; x++){
-			//X-dimension interpolation
-			float x_pos = fabs(x-ox),
-				wx = Grid::bspline(x_pos),
-				dx = Grid::bsplineSlope(x_pos);
-			for (int y=oy-1, y_end=oy+2; y<=y_end; y++, idx++){
-				//Y-dimension interpolation
-				float y_pos = fabs(y-oy),
-					wy = Grid::bspline(y_pos),
-					dy = Grid::bsplineSlope(y_pos);
+		for (int idx=0, y=oy-1, y_end=oy+2; y<=y_end; y++){
+			//Y-dimension interpolation
+			float y_pos = fabs(y-oy),
+				wy = Grid::bspline(y_pos),
+				dy = Grid::bsplineSlope(y_pos);
+			
+			for (int x=ox-1, x_end=ox+2; x<=x_end; x++, idx++){
+				//X-dimension interpolation
+				float x_pos = fabs(x-ox),
+					wx = Grid::bspline(x_pos),
+					dx = Grid::bsplineSlope(x_pos);
 				
 				//Final weight is dyadic product of weights in each dimension
 				float weight = wx*wy;
@@ -49,7 +52,7 @@ void Grid::initializeMass(){
 				p.weight_gradient[idx].setPosition(dx*wy, wx*dy);
 				
 				//Interpolate mass
-				nodes[(int) (x*size[0]+y)].mass += weight*p.mass;
+				nodes[(int) (y*size[0]+x)].mass += weight*p.mass;
 			}
 		}
 	}
@@ -60,12 +63,12 @@ void Grid::initializeVelocities(){
 		Particle& p = obj->particles[i];
 		int ox = p.grid_position[0],
 			oy = p.grid_position[1];
-		for (int idx=0, x=ox-1, x_end=ox+2; x<=x_end; x++){
-			for (int y=oy-1, y_end=oy+2; y<=y_end; y++, idx++){
+		for (int idx=0, y=oy-1, y_end=oy+2; y<=y_end; y++){
+			for (int x=ox-1, x_end=ox+2; x<=x_end; x++, idx++){
 				float w = p.weights[idx];
 				if (w > BSPLINE_EPSILON){
 					//Interpolate velocity
-					int n = (int) (x*size[0]+y);
+					int n = (int) (y*size[0]+x);
 					nodes[n].velocity += p.velocity * w * (p.mass/nodes[n].mass);
 				}
 			}
@@ -84,11 +87,11 @@ void Grid::initializeVelocities(){
 		
 		int ox = p.grid_position[0],
 			oy = p.grid_position[1];
-		for (int idx=0, x=ox-1, x_end=ox+2; x<=x_end; x++){
-			for (int y=oy-1, y_end=oy+2; y<=y_end; y++, idx++){
+		for (int idx=0, y=oy-1, y_end=oy+2; y<=y_end; y++){
+			for (int x=ox-1, x_end=ox+2; x<=x_end; x++, idx++){
 				float w = p.weights[idx];
 				if (w > BSPLINE_EPSILON){
-					grad += nodes[(int) (x*size[0]+y)].velocity.trans_product(p.weight_gradient[idx]);
+					grad += nodes[(int) (y*size[0]+x)].velocity.trans_product(p.weight_gradient[idx]);
 				}
 			}
 		}
@@ -99,21 +102,18 @@ void Grid::initializeVelocities(){
 //This should only be called once, at the beginning of the simulation
 void Grid::calculateVolumes() const{
 	//Estimate each particles volume (for force calculations)
-	//TODO: I multiply by 1.435 because this calculation is underestimating the actual volume; not sure why ????
-	//float node_volume = (1.435*cellsize).product();
-	float node_volume = cellsize.product();
 	for (int i=0; i<obj->size; i++){
 		Particle& p = obj->particles[i];
 		int ox = p.grid_position[0],
 			oy = p.grid_position[1];
 		//First compute particle density
 		p.density = 0;
-		for (int idx=0, x=ox-1, x_end=ox+2; x<=x_end; x++){
-			for (int y=oy-1, y_end=oy+2; y<=y_end; y++, idx++){
+		for (int idx=0, y=oy-1, y_end=oy+2; y<=y_end; y++){
+			for (int x=ox-1, x_end=ox+2; x<=x_end; x++, idx++){
 				float w = p.weights[idx];
 				if (w > BSPLINE_EPSILON){
 					//Node density is trivial
-					p.density += w * nodes[(int) (x*size[0]+y)].mass;
+					p.density += w * nodes[(int) (y*size[0]+x)].mass;
 				}
 			}
 		}
@@ -130,12 +130,12 @@ void Grid::calculateVelocities(const Vector2f& gravity){
 		Matrix2f force = p.stressForce();
 		int ox = p.grid_position[0],
 			oy = p.grid_position[1];
-		for (int idx=0, x=ox-1, x_end=ox+2; x<=x_end; x++){
-			for (int y=oy-1, y_end=oy+2; y<=y_end; y++, idx++){
+		for (int idx=0, y=oy-1, y_end=oy+2; y<=y_end; y++){
+			for (int x=ox-1, x_end=ox+2; x<=x_end; x++, idx++){
 				float w = p.weights[idx];
 				if (w > BSPLINE_EPSILON){
 					//Weight the force onto nodes
-					int n = (int) (x*size[0]+y);
+					int n = (int) (y*size[0]+x);
 					nodes[n].force += force*p.weight_gradient[idx];
 					nodes[n].has_force = true;
 				}
@@ -153,6 +153,36 @@ void Grid::calculateVelocities(const Vector2f& gravity){
 		}
 	}
 }
+//Collision detection/response against grid boundary nodes
+void Grid::collisionResponse(){
+	//We use border cells as boundary elements
+	//Number of boundary layers is customizable
+	for (int layer=0; layer<3; layer++){
+		//Offset to bottom/right
+		int bottom_row = size[0]*layer,
+			top_row = size[0]*(size[1]-layer-1),
+			right_col = size[0]-layer-1;
+		//Y-dimension
+		for (int i=layer; i<size[0]-layer; i++){
+			//Bottom border
+			float& vt = nodes[bottom_row+i].velocity_new[1];
+			if (vt < 0) vt = -vt;
+			//Top border
+			float& vb = nodes[top_row+i].velocity_new[1];
+			if (vb > 0) vb = -vb;
+		}
+		//X-dimension
+		for (int i=layer; i<size[1]-layer; i++){
+			int row = size[0]*i;
+			//Left border
+			float& vl = nodes[row].velocity_new[0];
+			if (vl < 0) vl = -vl;
+			//Right border
+			float& vr = nodes[right_col+row].velocity_new[0];
+			if (vr > 0) vr = -vr;
+		}
+	}
+}
 //Map grid velocities back to particles
 void Grid::updateVelocities() const{
 	for (int i=0; i<obj->size; i++){
@@ -162,24 +192,31 @@ void Grid::updateVelocities() const{
 		//Also keep track of velocity gradient
 		Matrix2f& grad = p.velocity_gradient;
 		grad.setData(0.0);
+		//VISUALIZATION PURPOSES ONLY:
+		//Recompute density
+		p.density = 0;
 		
 		int ox = p.grid_position[0],
 			oy = p.grid_position[1];
-		for (int idx=0, x=ox-1, x_end=ox+2; x<=x_end; x++){
-			for (int y=oy-1, y_end=oy+2; y<=y_end; y++, idx++){
+		for (int idx=0, y=oy-1, y_end=oy+2; y<=y_end; y++){
+			for (int x=ox-1, x_end=ox+2; x<=x_end; x++, idx++){
 				float w = p.weights[idx];
 				if (w > BSPLINE_EPSILON){
-					GridNode &node = nodes[(int) (x*size[0]+y)];
+					GridNode &node = nodes[(int) (y*size[0]+x)];
 					//Particle in cell
 					pic += node.velocity_new*w;
 					//Fluid implicit particle
 					flip += (node.velocity_new - node.velocity)*w;
 					//Velocity gradient
 					grad += node.velocity_new.trans_product(p.weight_gradient[idx]);
+					//VISUALIZATION ONLY: Update density
+					p.density += w * node.mass;
 				}
 			}
 		}
 		//Final velocity is a linear combination of PIC and FLIP components
 		p.velocity = flip*FLIP_PERCENT + pic*(1-FLIP_PERCENT);
+		//VISUALIZATION: Update density
+		p.density /= node_volume;
 	}
 }
