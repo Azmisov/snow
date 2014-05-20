@@ -21,7 +21,7 @@ typedef struct GridNode{
 class Grid {
 public:
 	Vector2f origin, size, cellsize;
-	GridNode* nodes; //use (y*size[0] + x) to index, where zero is the bottom-left corner
+	GridNode* nodes; //use (y*size[0] + x) to index, where zero is the bottom-left corner (e.g. like a cartesian grid)
 	PointCloud* obj;
 	float node_volume;
 	
@@ -37,8 +37,6 @@ public:
 	void calculateVolumes() const;
 	//Compute grid velocities
 	void calculateVelocities(const Vector2f& gravity);
-	//Resolve collisions, using grid boundary nodes as colliders
-	void collisionResponse();
 	//Map grid velocities back to particles
 	void updateVelocities() const;
 	

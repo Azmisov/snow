@@ -142,44 +142,32 @@ void Grid::calculateVelocities(const Vector2f& gravity){
 			}
 		}
 	}
+	
 	//Now we have all grid forces, compute velocities (euler integration)
-	for (int i=0, l=size.product(); i<l; i++){
-		GridNode &node = nodes[i];
-		//Check to see if this node needs to be computed
-		if (node.has_force){
-			node.velocity_new = node.velocity + TIMESTEP*(node.force/node.mass + gravity);
-			node.force.setPosition(0);
-			node.has_force = false;
-		}
-	}
-}
-//Collision detection/response against grid boundary nodes
-void Grid::collisionResponse(){
-	//We use border cells as boundary elements
-	//Number of boundary layers is customizable
-	for (int layer=0; layer<4; layer++){
-		//Offset to bottom/right
-		int bottom_row = size[0]*layer,
-			top_row = size[0]*(size[1]-layer-1),
-			right_col = size[0]-layer-1;
-		//Y-dimension
-		for (int i=layer; i<size[0]-layer; i++){
-			//Bottom border
-			float& vt = nodes[bottom_row+i].velocity_new[1];
-			if (vt < 0) vt = 0;
-			//Top border
-			float& vb = nodes[top_row+i].velocity_new[1];
-			if (vb > 0) vb = -vb;
-		}
-		//X-dimension
-		for (int i=layer; i<size[1]-layer; i++){
-			int row = size[0]*i;
-			//Left border
-			float& vl = nodes[row].velocity_new[0];
-			if (vl < 0) vl = -vl;
-			//Right border
-			float& vr = nodes[right_col+row].velocity_new[0];
-			if (vr > 0) vr = -vr;
+	Vector2f delta_scale = Vector2f(TIMESTEP);
+	delta_scale /= cellsize;
+	for (int y=0, idx=0; y<size[1]; y++){
+		for (int x=0; x<size[0]; x++, idx++){
+			//Get grid node (equivalent to (y*size[0] + x))
+			GridNode &node = nodes[idx];
+			//Check to see if this node needs to be computed
+			if (node.has_force){
+				node.velocity_new = node.velocity + TIMESTEP*(node.force/node.mass + gravity);
+				node.force.setPosition(0);
+				node.has_force = false;
+
+				//Collision response
+				//TODO: make this work for arbitrary collision geometry
+				const int border_layers = 4;
+				Vector2f new_pos = node.velocity_new*delta_scale + Vector2f(x, y);
+				//Left border, right border
+				if (new_pos[0] < border_layers-1 || new_pos[0] > size[0]-border_layers){
+					node.velocity_new[0] = -node.velocity_new[0];
+				}
+				//Bottom border
+				if (new_pos[1] < border_layers-1 || new_pos[1] > size[1]-border_layers)
+					node.velocity_new[1] = -node.velocity_new[1];
+			}
 		}
 	}
 }

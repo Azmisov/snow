@@ -4,8 +4,7 @@ using namespace std;
 
 //Old and new time values for each timestep
 double old_time, new_time = glfwGetTime();
-bool dirty_buffer = true,
-	screencast = false;
+bool dirty_buffer = true;
 int frame_count = 0,
 	bsize = 3*WIN_SIZE*WIN_SIZE;
 unsigned char* img_buffer;
@@ -43,6 +42,8 @@ int main(int argc, char** argv) {
 	
 	//Set default visualization parameters
 	glClearColor(1, 1, 1, 1);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	
 	//Setup simulation data
 	const float mpdim = .25;		//meters in each dimension
@@ -55,6 +56,8 @@ int main(int argc, char** argv) {
 		point_size = 1;
 	else if (point_size > 20)
 		point_size = 20;
+	if (!SUPPORTS_POINT_SMOOTH)
+		point_size *= 3;
 	
 	grid = new Grid(Vector2f(0), Vector2f(WIN_METERS, WIN_METERS), Vector2f(100), snow);
 	//We need to estimate particle volumes before we start
@@ -67,27 +70,30 @@ int main(int argc, char** argv) {
 	
 	//Drawing & event loop
 	//Create directory to save buffers in
-	if (screencast){
-		mkdir("../screencast/",0777);
-		FreeImage_Initialise();
-		img_buffer = new unsigned char[bsize];
-	}
+#if SCREENCAST
+	mkdir("../screencast/",0777);
+	FreeImage_Initialise();
+	img_buffer = new unsigned char[bsize];
+#endif
+	
 	while (!glfwWindowShouldClose(window)){
 		if (dirty_buffer){
 			redraw();
 			dirty_buffer = false;
-			if (screencast)
-				save_buffer(frame_count++);
+#if SCREENCAST
+			save_buffer(frame_count++);
+#endif
 		}
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
 
 	//Exit
-	if (screencast){
-		FreeImage_DeInitialise();
-		delete[] img_buffer;
-	}
+#if SCREENCAST
+	FreeImage_DeInitialise();
+	delete[] img_buffer;
+#endif	
+	
 	glfwDestroyWindow(window);
 	glfwTerminate();
 	exit(EXIT_SUCCESS);
@@ -124,8 +130,8 @@ void redraw(){
 	for (int i=0; i<snow->size; i++){
 		Particle& p = snow->particles[i];
 		//We can use the particle's density to vary color
-		//Max density set to 400
-		float density = 1 - p.density/400;
+		//Max density set to 160+DENSITY
+		float density = 1 - p.density/(160+DENSITY);
 		glColor3f(0, density < 0 ? 0 : density, 1);
 		glVertex2fv(p.position.loc);
 	}
@@ -149,7 +155,6 @@ void *simulate(void *args){
 		grid->initializeVelocities();
 		//Compute grid velocities
 		grid->calculateVelocities(gravity);
-		grid->collisionResponse();
 		//Map back to particles
 		grid->updateVelocities();
 		//Update particle data
@@ -164,6 +169,7 @@ void *simulate(void *args){
 	pthread_exit(NULL);
 }
 
+#if SCREENCAST
 void save_buffer(int time){
 	FILE *file;
 	char fname[32];
@@ -182,3 +188,4 @@ void save_buffer(int time){
 	FreeImage_Save(FIF_PNG, img, fname, 0);
 	FreeImage_Unload(img);
 }
+#endif

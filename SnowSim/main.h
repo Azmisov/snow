@@ -9,11 +9,17 @@
 #include <time.h>
 #include <unistd.h>
 #include <sys/stat.h>
-#include <FreeImage.h>
 #include "Particle.h"
 #include "Collider.h"
 #include "PointCloud.h"
 #include "Grid.h"
+
+//Various compiler options
+#define SUPPORTS_POINT_SMOOTH 0
+#define SCREENCAST 0
+#if SCREENCAST
+#include <FreeImage.h>
+#endif
 
 #define WIN_SIZE 640
 #define WIN_METERS 1.5

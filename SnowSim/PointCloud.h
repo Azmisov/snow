@@ -40,7 +40,7 @@ public:
 			for (int y=0; y<ppdim; y++){
 				obj->particles.push_back(Particle(
 					Vector2f(x*spacing, y*spacing),
-					Vector2f(0,1), m, lambda+1000*x+1000*y, mu+1000*x+1000*y
+					Vector2f(6,0), m, lambda+1000*x+1000*y, mu+1000*x+1000*y //
 				));
 			}
 		}
