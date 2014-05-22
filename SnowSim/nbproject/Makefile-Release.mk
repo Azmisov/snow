@@ -48,8 +48,8 @@ OBJECTFILES= \
 CFLAGS=
 
 # CC Compiler Flags
-CCFLAGS=-ffast-math
-CXXFLAGS=-ffast-math
+CCFLAGS=
+CXXFLAGS=
 
 # Fortran Compiler Flags
 FFLAGS=
@@ -71,37 +71,37 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/snowsim: ${OBJECTFILES}
 ${OBJECTDIR}/Collider.o: Collider.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} $@.d
-	$(COMPILE.cc) -O3 -ffast-math -MMD -MP -MF $@.d -o ${OBJECTDIR}/Collider.o Collider.cpp
+	$(COMPILE.cc) -O3 -MMD -MP -MF $@.d -o ${OBJECTDIR}/Collider.o Collider.cpp
 
 ${OBJECTDIR}/Grid.o: Grid.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} $@.d
-	$(COMPILE.cc) -O3 -ffast-math -MMD -MP -MF $@.d -o ${OBJECTDIR}/Grid.o Grid.cpp
+	$(COMPILE.cc) -O3 -MMD -MP -MF $@.d -o ${OBJECTDIR}/Grid.o Grid.cpp
 
 ${OBJECTDIR}/Matrix2f.o: Matrix2f.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} $@.d
-	$(COMPILE.cc) -O3 -ffast-math -MMD -MP -MF $@.d -o ${OBJECTDIR}/Matrix2f.o Matrix2f.cpp
+	$(COMPILE.cc) -O3 -MMD -MP -MF $@.d -o ${OBJECTDIR}/Matrix2f.o Matrix2f.cpp
 
 ${OBJECTDIR}/Particle.o: Particle.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} $@.d
-	$(COMPILE.cc) -O3 -ffast-math -MMD -MP -MF $@.d -o ${OBJECTDIR}/Particle.o Particle.cpp
+	$(COMPILE.cc) -O3 -MMD -MP -MF $@.d -o ${OBJECTDIR}/Particle.o Particle.cpp
 
 ${OBJECTDIR}/PointCloud.o: PointCloud.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} $@.d
-	$(COMPILE.cc) -O3 -ffast-math -MMD -MP -MF $@.d -o ${OBJECTDIR}/PointCloud.o PointCloud.cpp
+	$(COMPILE.cc) -O3 -MMD -MP -MF $@.d -o ${OBJECTDIR}/PointCloud.o PointCloud.cpp
 
 ${OBJECTDIR}/Vector2f.o: Vector2f.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} $@.d
-	$(COMPILE.cc) -O3 -ffast-math -MMD -MP -MF $@.d -o ${OBJECTDIR}/Vector2f.o Vector2f.cpp
+	$(COMPILE.cc) -O3 -MMD -MP -MF $@.d -o ${OBJECTDIR}/Vector2f.o Vector2f.cpp
 
 ${OBJECTDIR}/main.o: main.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} $@.d
-	$(COMPILE.cc) -O3 -ffast-math -MMD -MP -MF $@.d -o ${OBJECTDIR}/main.o main.cpp
+	$(COMPILE.cc) -O3 -MMD -MP -MF $@.d -o ${OBJECTDIR}/main.o main.cpp
 
 # Subprojects
 .build-subprojects:

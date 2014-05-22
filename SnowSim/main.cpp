@@ -15,6 +15,45 @@ PointCloud* snow;
 Grid* grid;
 
 int main(int argc, char** argv) {
+	//Conjugate test
+	Matrix2f A = Matrix2f(5, 6, 7, 8);
+	Vector2f b = Vector2f(84, 116);
+	Vector2f x = Vector2f(b);
+	
+	Vector2f r = b-A*x;
+	Vector2f p = r;
+	Vector2f Ap = A*p;
+	Vector2f Ar = A*r;
+	double rAr = r.dot(Ar);
+	
+	int iterations = 0;
+	Vector2f error = Vector2f(100);
+	while (error.length() > 0.0001){
+		float alpha = rAr / (Ap.dot(Ap));
+		error = alpha*p;
+		x += error;
+		//Update residual
+		r -= alpha*Ap;
+		Ar = A*r;
+		//Compute new gradient
+		double temp = r.dot(Ar);
+		double beta = temp / rAr;
+		rAr = temp;
+		p = r + beta*p;
+		Ap = Ar + beta*Ap;
+		
+		iterations++;
+	}
+	
+	cout << "ITERS = " << iterations << endl;
+	cout << "Error = " << error.length() << endl;
+	cout << x[0] << ", " << x[1] << endl;
+	Vector2f b_test = A*x;
+	cout << "TARGET = " << b[0] << ", " << b[1] << endl;
+	cout << "RESULT = " << b_test[0] << ", " << b_test[1] << endl;
+	
+	return 0;
+	
 	//Create GLFW window
 	GLFWwindow* window;
 	glfwSetErrorCallback(error_callback);
@@ -154,7 +193,7 @@ void *simulate(void *args){
 		grid->initializeMass();
 		grid->initializeVelocities();
 		//Compute grid velocities
-		grid->calculateVelocities(gravity);
+		grid->explicitVelocities(gravity);
 		//Map back to particles
 		grid->updateVelocities();
 		//Update particle data

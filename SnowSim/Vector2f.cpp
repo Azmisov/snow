@@ -48,7 +48,7 @@ const float Vector2f::length() const{
 		sum += loc[i]*loc[i];
 	return sqrt(sum);
 }
-const Matrix2f Vector2f::trans_product(const Vector2f& v) const{
+const Matrix2f Vector2f::dyadic_product(const Vector2f& v) const{
 	return Matrix2f(
 		loc[0]*v.loc[0], loc[0]*v.loc[1],
 		loc[1]*v.loc[0], loc[1]*v.loc[1]

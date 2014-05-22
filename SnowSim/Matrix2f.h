@@ -34,13 +34,16 @@ public:
 	void setData(float val);
 	void setData(float i11, float i12, float i21, float i22);
 	
+	//Make columns orthonormal
+	void normalize();
 	const float determinant() const;
 	const Matrix2f transpose() const;
 	const Matrix2f inverse() const;
+	const Matrix2f cofactor() const;
+	//Frobenius inner product is like the sum of a piecewise matrix multiply
+	float frobeniusInnerProduct(const Matrix2f& c) const;
 	//Singular value decomposition, where this = w.diag_product(e)*v.transpose()
 	void svd(Matrix2f* w, Vector2f* e, Matrix2f* v) const;
-	//Make columns orthonormal
-	void normalize();
 	
 	//DIAGONAL MATRIX OPERATIONS
 	//Matrix * Matrix
@@ -53,6 +56,11 @@ public:
 	//Matrix + Matrix
 	void diag_sum(const float& c);
 	void diag_sum(const Vector2f& v);
+	
+	//OVERLOADS
+	//Array subscripts
+	float* operator[](int idx);
+	const float* operator[](int idx) const;
 	
 	//SCALAR OVERLOADS
 	//Matrix / Scalar

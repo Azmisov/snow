@@ -36,7 +36,8 @@ public:
 	//Map grid volumes back to particles (first timestep only)
 	void calculateVolumes() const;
 	//Compute grid velocities
-	void calculateVelocities(const Vector2f& gravity);
+	void explicitVelocities(const Vector2f& gravity);
+	void implicitVelocities();
 	//Map grid velocities back to particles
 	void updateVelocities() const;
 	

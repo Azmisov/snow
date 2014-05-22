@@ -105,7 +105,6 @@
         </cTool>
         <ccTool>
           <developmentMode>6</developmentMode>
-          <commandLine>-ffast-math</commandLine>
         </ccTool>
         <fortranCompilerTool>
           <developmentMode>5</developmentMode>

@@ -34,6 +34,7 @@ void Particle::updateGradient(){
 	//The singular values (basically a scale transform) tell us if 
 	//the particle has exceeded critical stretch/compression
 	def_elastic.svd(&svd_w, &svd_e, &svd_v);
+	Matrix2f svd_v_trans = svd_v.transpose();
 	//Clamp singular values to within elastic region
 	for (int i=0; i<2; i++){
 		if (svd_e[i] < CRIT_COMPRESS)
@@ -41,6 +42,11 @@ void Particle::updateGradient(){
 		else if (svd_e[i] > CRIT_STRETCH)
 			svd_e[i] = CRIT_STRETCH;
 	}
+	//Compute polar decomposition, from clamped SVD
+	polar_r.setData(svd_w*svd_v_trans);
+	polar_s.setData(svd_v);
+	polar_s.diag_product(svd_e);
+	polar_s.setData(polar_s*svd_v_trans);
 	
 	//Recompute elastic and plastic gradient
 	//We're basically just putting the SVD back together again
@@ -57,7 +63,7 @@ void Particle::updateGradient(){
 	mu = mu_s*scale;
 	lambda = lambda_s*scale;
 }
-Matrix2f Particle::cauchyStress(){
+const Matrix2f Particle::cauchyStress(){
 	/* Stress force on each particle is: -volume*cauchy_stress
 		We transfer the force to the FEM grid using the shape function gradient
 		cauchy_stress can be computed via: (2u(Fe - Re)*Fe^T + y(Je - 1)Je*I)/J
@@ -69,38 +75,68 @@ Matrix2f Particle::cauchyStress(){
 			J: determinant of Fe*Fp
 			Je: determinant of Fe
 			u/y: Lame parameters
-	 
-		For an implicit solution, we also need to calculate the forces with unresolved velocities:
-			(1/J) * [2u(Fe' - Re') + y(Je' - 1)Je'*Fe'^-T] * Fe^T
-		We define Fe' = X*Fe (the same way we do in updateGradient()),
-		such that X = (I + TIMESTEP*weight_gradient).
 
 		Note: volume = volume_initial*J, so the J drops out
 	*/
 	
-	Matrix2f temp = def_elastic - svd_w*svd_v.transpose();
+	Matrix2f temp = def_elastic - polar_r;
 	temp *= 2*mu;
 	Matrix2f temp2 = temp*def_elastic.transpose();
 	temp2.diag_sum(lambda*det_elastic*(det_elastic-1));
 	return -volume * temp2;
+}
+const Vector2f Particle::deltaForce(Matrix2f& del_elastic, Matrix2f& del_rotate, const Vector2f& u, const Vector2f& weight_grad){
+	//For detailed explanation, check out the implicit math pdf for details
+	//Before we do the force calculation, we need deltaF, deltaR, and delta(JF^-T)
 	
-	/* For implicit solution only:
-	//First compute temporary elastic deformation gradient for next timestep
-	velocity_gradient *= TIMESTEP;
-	velocity_gradient.diag_sum(1);
-	Matrix2f fep = velocity_gradient * def_elastic,
-			fep_inv_trans = fep.inverse();
-	fep_inv_trans.transpose();
-	float fe_det = fep.determinant();
-	//Compute SVD of temporary Fe
-	//We'll use the member variables of the class, since they aren't being used anymore
-	fep.svd(&svd_w, &svd_e, &svd_v);
-	//Now put it all together
-	fep -= svd_w*svd_v.transpose();
-	fep *= 2*mu;
-	fep_inv_trans *= lambda*fe_det*(fe_det-1);
-	fep += fep_inv_trans;
-	//Final force
-	return -volume * fep * def_elastic.transpose();
-	//*/
+	//Finds delta(Fe), where Fe is the elastic deformation gradient
+	del_elastic.setData(def_elastic);
+	del_elastic *= TIMESTEP*u.dot(weight_grad);
+
+	//Compute R^T*dF - dF^TR
+	//It is skew symmetric, so we only need to compute one value (three for 3D)
+	float y = (polar_r[0][0]*del_elastic[1][0] + polar_r[1][0]*del_elastic[1][1]) -
+				(polar_r[0][1]*del_elastic[0][0] + polar_r[1][1]*del_elastic[0][1]);
+	//Next we need to compute MS + SM, where S is the hermitian matrix (symmetric for real
+	//valued matrices) of the polar decomposition and M is (R^T*dR); This is equal
+	//to the matrix we just found (R^T*dF ...), so we set them equal to eachother
+	//Since everything is so symmetric, we get a nice system of linear equations
+	//once we multiply everything out. (see pdf for details)
+	//In the case of 2D, we only need to solve for one variable (three for 3D)
+	float x = y / (polar_s[0][0] + polar_s[1][1]);
+	//Final computation is deltaR = R*(R^T*dR)
+	del_rotate.setData(
+		-polar_r[1][0]*x, polar_r[0][0]*x,
+		-polar_r[1][1]*x, polar_r[0][1]*x
+	);
+	
+	//We need the cofactor matrix of F, JF^-T
+	Matrix2f cofactor = def_elastic.cofactor();
+		
+	//The last matrix we need is delta(JF^-T)
+	//Instead of doing the complicated matrix derivative described in the paper
+	//we can just take the derivative of each individual entry in JF^-T; JF^-T is
+	//the cofactor matrix of F, so we'll just hardcode the whole thing
+	//For example, entry [0][0] for a 3x3 matrix is
+	//	cofactor = e*i - f*h
+	//	derivative = (e*Di + De*i) - (f*Dh + Df*h)
+	//	where the derivatives (capital D) come from our precomputed delta(F)
+	//In the case of 2D, this turns out to be just the cofactor of delta(F)
+	//For 3D, it will not be so simple
+	Matrix2f del_cofactor = del_elastic.cofactor();
+
+	//Calculate "A" as given by the paper
+	//Co-rotational term
+	Matrix2f Ap = del_elastic-del_rotate;
+	Ap *= 2*mu;
+	//Primary contour term
+	cofactor *= cofactor.frobeniusInnerProduct(del_elastic);
+	del_cofactor *= (det_elastic-1);
+	cofactor += del_cofactor;
+	cofactor *= lambda;
+	Ap += cofactor;
+	
+	//Put it all together
+	//Parentheses are important; M*M*V is slower than M*(M*V)
+	return -volume*(Ap*(def_elastic.transpose()*weight_grad));
 }

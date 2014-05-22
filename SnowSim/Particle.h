@@ -18,6 +18,8 @@ public:
 	//Cached SVD's for elastic deformation gradient
 	Matrix2f svd_w, svd_v;
 	Vector2f svd_e;
+	//Cached polar decomposition
+	Matrix2f polar_r, polar_s;
 	//Cached determinants
 	float det_elastic, det_plastic;
 	//Grid interpolation weights
@@ -34,7 +36,13 @@ public:
 	//Update deformation gradient
 	void updateGradient();
 	//Compute stress tensor
-	Matrix2f cauchyStress();
+	const Matrix2f cauchyStress();
+	
+	//Computes stress force delta, for implicit velocity update
+	const Vector2f deltaForce(
+		Matrix2f& del_elastic, Matrix2f& del_rotate,
+		const Vector2f& u, const Vector2f& weight_grad
+	);
 };
 
 #endif

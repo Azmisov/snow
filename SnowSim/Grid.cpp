@@ -122,8 +122,8 @@ void Grid::calculateVolumes() const{
 		p.volume = p.mass / p.density;
 	}
 }
-//Calculate next timestep velocities for use in explicit/implicit integration
-void Grid::calculateVelocities(const Vector2f& gravity){
+//Calculate next timestep velocities for use in implicit integration
+void Grid::explicitVelocities(const Vector2f& gravity){
 	for (int i=0; i<obj->size; i++){
 		Particle& p = obj->particles[i];
 		//Solve for grid internal forces
@@ -171,6 +171,10 @@ void Grid::calculateVelocities(const Vector2f& gravity){
 		}
 	}
 }
+//Solve linear system for implicit velocities
+void Grid::implicitVelocities(){
+	//IMPLICIT_RATIO
+}
 //Map grid velocities back to particles
 void Grid::updateVelocities() const{
 	for (int i=0; i<obj->size; i++){
@@ -196,7 +200,7 @@ void Grid::updateVelocities() const{
 					//Fluid implicit particle
 					flip += (node.velocity_new - node.velocity)*w;
 					//Velocity gradient
-					grad += node.velocity_new.trans_product(p.weight_gradient[idx]);
+					grad += node.velocity_new.dyadic_product(p.weight_gradient[idx]);
 					//VISUALIZATION ONLY: Update density
 					p.density += w * node.mass;
 				}

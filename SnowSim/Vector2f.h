@@ -28,7 +28,7 @@ public:
 	const float product() const;
 	const float length() const;
 	//Vector * Vector^T
-	const Matrix2f trans_product(const Vector2f& v) const;
+	const Matrix2f dyadic_product(const Vector2f& v) const;
 	
 	//OVERLOADS
 	//Unary negation

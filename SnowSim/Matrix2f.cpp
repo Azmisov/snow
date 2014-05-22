@@ -34,6 +34,16 @@ void Matrix2f::setData(float i11, float i12, float i21, float i22){
 	data[1][1] = i22;
 }
 
+void Matrix2f::normalize(){
+	for (int i=0; i<2; i++){
+		float l = 0;
+		for (int j=0; j<2; j++)
+			l += data[i][j]*data[i][j];
+		l = sqrt(l);
+		for (int j=0; j<2; j++)
+			data[i][j] /= l;
+	}
+}
 const float Matrix2f::determinant() const{
 	return data[0][0]*data[1][1] - data[0][1]*data[1][0];
 }
@@ -48,6 +58,21 @@ const Matrix2f Matrix2f::inverse() const{
 		-data[0][1]/det,
 		data[0][0]/det
 	);
+}
+const Matrix2f Matrix2f::cofactor() const{
+	return Matrix2f(
+		data[1][1], -data[0][1],
+		-data[1][0], data[0][0]
+	);
+}
+float Matrix2f::frobeniusInnerProduct(const Matrix2f& c) const{
+	float prod = 0;
+	for (int i=0; i<2; i++){
+		for (int j=0; j<2; j++){
+			prod += data[i][j]*c.data[i][j];
+		}
+	}
+	return prod;
 }
 void Matrix2f::svd(Matrix2f* w, Vector2f* e, Matrix2f* v) const{
 	/* Probably not the fastest, but I can't find any simple algorithms
@@ -103,17 +128,6 @@ void Matrix2f::svd(Matrix2f* w, Vector2f* e, Matrix2f* v) const{
 		}
 	}
 }
-//Make columns orthonormal
-void Matrix2f::normalize(){
-	for (int i=0; i<2; i++){
-		float l = 0;
-		for (int j=0; j<2; j++)
-			l += data[i][j]*data[i][j];
-		l = sqrt(l);
-		for (int j=0; j<2; j++)
-			data[i][j] /= l;
-	}
-}
 
 //DIAGONAL MATRIX OPERATIONS
 //Matrix * Matrix
@@ -147,6 +161,15 @@ void Matrix2f::diag_sum(const float& c){
 void Matrix2f::diag_sum(const Vector2f& v){
 	for (int i=0; i<2; i++)
 		data[i][i] += v[i];
+}
+
+//OVERLOADS
+//Array subscripts (Warning! these use [column][row])
+float* Matrix2f::operator[](int idx){
+	return data[idx];
+}
+const float* Matrix2f::operator[](int idx) const{
+	return data[idx];
 }
 
 //SCALAR OVERLOADS
