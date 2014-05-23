@@ -156,7 +156,7 @@ void redraw(){
 			Particle& p = snow->particles[i];
 			//We can use the particle's density to vary color
 			//Max density set to 160+DENSITY
-			float density = 1 - p.density/(160+DENSITY);
+			float density = 1 - p.density/DENSITY;
 			glColor3f(0, density < 0 ? 0 : density, 1);
 			glVertex2fv(p.position.data);
 		}

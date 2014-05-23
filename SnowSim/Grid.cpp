@@ -8,7 +8,7 @@ Grid::Grid(Vector2f pos, Vector2f dims, Vector2f cells, PointCloud* object){
 	nodes_length = size.product();
 	nodes = new GridNode[nodes_length];
 	//TODO: this is underestimating? perhaps we can scale by 1.435
-	node_volume = cellsize.product();
+	node_volume = cellsize.product()*.75;
 }
 Grid::Grid(const Grid& orig){}
 Grid::~Grid(){

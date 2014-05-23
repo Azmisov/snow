@@ -15,6 +15,7 @@ inline float random_number(float lo, float hi){
 class PointCloud {
 public:
 	int size;
+	float mass;
 	std::vector<Particle> particles;
 
 	PointCloud();
@@ -38,8 +39,9 @@ public:
 		float spacing = ppdim == 1 ? 0 : mpdim/(ppdim-1);
 		//point cloud definition; simple square
 		//we give each particle equal mass (TODO: make mass dependent on volume?)
-		float volume = mpdim*mpdim,	//TODO: this is 2D, will need to adjust for 3D
-			m = (DENSITY*volume)/obj->size;
+		float volume = mpdim*mpdim*mpdim;
+		obj->mass = DENSITY*volume;
+		float m = volume/obj->size;
 		//we also give each particle equal lame parameters (TODO: randomized/customizable lames)
 		float lambda = YOUNGS_MODULUS*POISSONS_RATIO/((1+POISSONS_RATIO)*(1-2*POISSONS_RATIO)),
 			mu = YOUNGS_MODULUS/(2+2*POISSONS_RATIO);
@@ -78,7 +80,8 @@ public:
 		//Otherwise, create our object
 		PointCloud *obj = new PointCloud(particles);
 		//Use volume to estimate mass per particle
-		float mass = volume*DENSITY/particles;
+		obj->mass = volume*DENSITY;
+		float mass = obj->mass/particles;
 		//Randomly scatter points
 		float bounds[4];
 		int shape_num = 0, total_points = 0;
