@@ -39,10 +39,7 @@ public:
 	const Matrix2f cauchyStress();
 	
 	//Computes stress force delta, for implicit velocity update
-	const Vector2f deltaForce(
-		Matrix2f& del_elastic, Matrix2f& del_rotate,
-		const Vector2f& u, const Vector2f& weight_grad
-	);
+	const Vector2f deltaForce(const Vector2f& u, const Vector2f& weight_grad);
 };
 
 #endif

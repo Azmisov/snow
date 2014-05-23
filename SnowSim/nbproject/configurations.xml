@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configurationDescriptor version="88">
+<configurationDescriptor version="90">
   <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
                    projectFiles="true">
-      <itemPath>Collider.h</itemPath>
       <itemPath>Grid.h</itemPath>
       <itemPath>Matrix2f.h</itemPath>
       <itemPath>Particle.h</itemPath>
@@ -20,7 +19,6 @@
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
-      <itemPath>Collider.cpp</itemPath>
       <itemPath>Grid.cpp</itemPath>
       <itemPath>Matrix2f.cpp</itemPath>
       <itemPath>Particle.cpp</itemPath>
@@ -55,18 +53,15 @@
   <confs>
     <conf name="Debug" type="1">
       <toolsSet>
-        <remote-sources-mode>LOCAL_SOURCES</remote-sources-mode>
         <compilerSet>default</compilerSet>
+        <dependencyChecking>true</dependencyChecking>
+        <rebuildPropChanged>false</rebuildPropChanged>
       </toolsSet>
       <compileType>
         <linkerTool>
           <commandLine>glfw3/libglfw3.a -lGL -lX11 -lXxf86vm -lm -lpthread -lXrandr -lXi</commandLine>
         </linkerTool>
       </compileType>
-      <item path="Collider.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="Collider.h" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="Grid.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="Grid.h" ex="false" tool="3" flavor2="0">
@@ -96,8 +91,9 @@
     </conf>
     <conf name="Release" type="1">
       <toolsSet>
-        <remote-sources-mode>LOCAL_SOURCES</remote-sources-mode>
         <compilerSet>default</compilerSet>
+        <dependencyChecking>true</dependencyChecking>
+        <rebuildPropChanged>false</rebuildPropChanged>
       </toolsSet>
       <compileType>
         <cTool>
@@ -116,10 +112,6 @@
           <commandLine>glfw3/libglfw3.a -lGL -lX11 -lXxf86vm -lm -lpthread -lXrandr -lXi</commandLine>
         </linkerTool>
       </compileType>
-      <item path="Collider.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="Collider.h" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="Grid.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="Grid.h" ex="false" tool="3" flavor2="0">

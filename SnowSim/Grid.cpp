@@ -5,8 +5,8 @@ Grid::Grid(Vector2f pos, Vector2f dims, Vector2f cells, PointCloud* object){
 	origin = pos;
 	cellsize = dims/cells;
 	size = cells+1;
-	int len = size.product();
-	nodes = new GridNode[len];
+	nodes_length = size.product();
+	nodes = new GridNode[nodes_length];
 	//TODO: this is underestimating? perhaps we can scale by 1.435
 	node_volume = cellsize.product();
 }
@@ -19,7 +19,8 @@ Grid::~Grid(){
 void Grid::initializeMass(){
 	//Reset the grid
 	//If the grid is sparsely filled, it may be better to reset individual nodes
-	memset(nodes, 0, sizeof(GridNode)*size.product());
+	//Also, not all these variables need to be zeroed, so... yeah
+	memset(nodes, 0, sizeof(GridNode)*nodes_length);
 	
 	//Map particle data to grid
 	for (int i=0; i<obj->size; i++){
@@ -49,7 +50,7 @@ void Grid::initializeMass(){
 				p.weights[idx] = weight;
 				
 				//Weight gradient is a vector of partial derivatives
-				p.weight_gradient[idx].setPosition(dx*wy, wx*dy);
+				p.weight_gradient[idx].setData(dx*wy, wx*dy);
 				
 				//Interpolate mass
 				nodes[(int) (y*size[0]+x)].mass += weight*p.mass;
@@ -137,7 +138,7 @@ void Grid::explicitVelocities(const Vector2f& gravity){
 					//Weight the force onto nodes
 					int n = (int) (y*size[0]+x);
 					nodes[n].force += force*p.weight_gradient[idx];
-					nodes[n].has_force = true;
+					nodes[n].has_velocity = true;
 				}
 			}
 		}
@@ -151,10 +152,10 @@ void Grid::explicitVelocities(const Vector2f& gravity){
 			//Get grid node (equivalent to (y*size[0] + x))
 			GridNode &node = nodes[idx];
 			//Check to see if this node needs to be computed
-			if (node.has_force){
+			if (node.has_velocity){
 				node.velocity_new = node.velocity + TIMESTEP*(node.force/node.mass + gravity);
-				node.force.setPosition(0);
-				node.has_force = false;
+				//Force is used by implicit calculator, so we should reset it
+				node.force.setData(0);
 
 				//Collision response
 				//TODO: make this work for arbitrary collision geometry
@@ -173,7 +174,117 @@ void Grid::explicitVelocities(const Vector2f& gravity){
 }
 //Solve linear system for implicit velocities
 void Grid::implicitVelocities(){
-	//IMPLICIT_RATIO
+	//With an explicit solution, we compute vf = vi + (f[n]/m)*dt
+	//But for implicit, we use the force at the next timestep, f[n+1]
+	//Stomakhin interpolates between the two, using IMPLICIT_RATIO
+	//If we call v* the explicit vf, we can do some algebra and get
+	//	v* = vf - IMPLICIT_RATION*dt*(df/m)
+	//The problem is, df (change in force from n to n+1) depends on vf,
+	//so we can't just compute it directly; instead, we use an iterative
+	//method (conjugate residuals) to find what vf should be. We make an
+	//initial guess of what vf should be (setting it to v*) and then
+	//iteratively refine our guess until the error is small enough.
+	
+	//INITIALIZE LINEAR SOLVE
+	for (int idx=0; idx<nodes_length; idx++){
+		GridNode& n = nodes[idx];
+		n.active = n.has_velocity;
+		if (n.active){
+			//recomputeImplicitForces will compute Er, given r
+			//Initially, we want vf - E*vf; so we'll temporarily set r to vf
+			n.r.setData(n.velocity_new);
+			//Also set the error to 1
+			n.err.setData(1);
+		}
+	}
+	//As said before, we need to compute vf-E*vf as our initial "r" residual
+	recomputeImplicitForces();
+	for (int idx=0; idx<nodes_length; idx++){
+		GridNode& n = nodes[idx];
+		if (n.active){
+			n.r = n.velocity_new - n.Er;
+			//p starts out equal to residual
+			n.p = n.r;
+			//cache r.dot(Er)
+			n.rEr = n.r.dot(n.Er);
+		}
+	}
+	//Since we updated r, we need to recompute Er
+	recomputeImplicitForces();
+	//Ep starts out the same as Er
+	for (int idx=0; idx<nodes_length; idx++){
+		GridNode& n = nodes[idx];
+		if (n.active)
+			n.Ep = n.Er;
+	}
+	
+	//LINEAR SOLVE
+	for (int i=0; i<MAX_IMPLICIT_ITERS; i++){
+		bool done = true;
+		for (int idx=0; idx<nodes_length; idx++){
+			GridNode& n = nodes[idx];
+			//Only perform calculations on nodes that haven't been solved yet
+			if (n.active){
+				//Alright, so we'll handle each node's solve separately
+				//First thing to do is update our vf guess
+				float alpha = n.rEr / (n.Ep.dot(n.Ep));
+				n.err = alpha*n.p;
+				//If the error is small enough, we're done
+				if (n.err[0]*n.err[0] + n.err[1]*n.err[1] <= MAX_IMPLICIT_ERR){
+					n.active = false;
+					break;
+				}
+				else done = false;
+				//Update vf and residual
+				n.velocity_new += n.err;
+				n.r -= alpha*n.Ep;
+			}
+		}
+		//If all the velocities converged, we're done
+		if (done) break;
+		//Otherwise we recompute Er, so we can compute our next guess
+		recomputeImplicitForces();
+		//Calculate the gradient for our next guess
+		for (int idx=0; idx<nodes_length; idx++){
+			GridNode& n = nodes[idx];
+			if (n.active){
+				float temp = n.r.dot(n.Er);
+				float beta = temp / n.rEr;
+				n.rEr = temp;
+				//Update p
+				n.p *= beta;
+				n.p += n.r;
+				//Update Ep
+				n.Ep *= beta;
+				n.Ep += n.Er;
+			}
+		}
+	}
+}
+void Grid::recomputeImplicitForces(){
+	for (int i=0; i<obj->size; i++){
+		Particle& p = obj->particles[i];
+		int ox = p.grid_position[0],
+			oy = p.grid_position[1];
+		for (int idx=0, y=oy-1, y_end=oy+2; y<=y_end; y++){
+			for (int x=ox-1, x_end=ox+2; x<=x_end; x++, idx++){
+				GridNode& n = nodes[(int) (y*size[0]+x)];
+				if (n.active){
+					//I don't think there is any way to cache intermediary
+					//results for reuse with each iteration, unfortunately
+					n.force += p.deltaForce(n.r, p.weight_gradient[idx]);
+				}
+			}
+		}
+	}
+	
+	//We have delta force for each node; to get Er, we use the following formula:
+	//	r - IMPLICIT_RATIO*TIMESTEP*delta_force/mass
+	for (int idx=0; idx<nodes_length; idx++){
+		GridNode& n = nodes[idx];
+		if (n.active)
+			n.Er = n.r - IMPLICIT_RATIO*TIMESTEP/n.mass*n.force;
+	}
 }
 //Map grid velocities back to particles
 void Grid::updateVelocities() const{

@@ -10,7 +10,6 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include "Particle.h"
-#include "Collider.h"
 #include "PointCloud.h"
 #include "Grid.h"
 

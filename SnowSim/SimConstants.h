@@ -10,7 +10,9 @@ static const float
 	DENSITY = 240,				//Density of snow in kg/m^3 (Stomakhin suggests 400, I'm adjusting for 2D)
 	YOUNGS_MODULUS = 1.4e5,		//Young's modulus (springiness)
 	POISSONS_RATIO = .2,		//Poisson's ratio (transverse/axial strain ratio)
-	IMPLICIT_RATIO = .5;		//Percentage that should be implicit vs explicit for velocity update
+	IMPLICIT_RATIO = .5,		//Percentage that should be implicit vs explicit for velocity update
+	MAX_IMPLICIT_ITERS = 30,	//Maximum iterations for the conjugate residual
+	MAX_IMPLICIT_ERR = 1e-6;	//Maximum allowed squared error for conjugate residual
 
 #endif
 

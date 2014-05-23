@@ -2,8 +2,8 @@
 
 Particle::Particle(){}
 Particle::Particle(const Vector2f& pos, const Vector2f& vel, float mass, float lame_lambda, float lame_mu){
-	position.setPosition(pos);
-	velocity.setPosition(vel);
+	position.setData(pos);
+	velocity.setData(vel);
 	this->mass = mass;
 	lambda_s = lame_lambda;
 	mu_s = lame_mu;
@@ -13,9 +13,11 @@ Particle::Particle(const Vector2f& pos, const Vector2f& vel, float mass, float l
 	def_plastic.loadIdentity();
 	det_elastic = 1;
 	det_plastic = 1;
-	svd_e.setPosition(1, 1);
-	svd_w.setData(0, 1, 1, 0);
-	svd_v.setData(0, 1, 1, 0);
+	svd_e.setData(1, 1);
+	svd_w.loadIdentity();
+	svd_v.loadIdentity();
+	polar_r.loadIdentity();
+	polar_s.loadIdentity();
 }
 Particle::~Particle(){}
 
@@ -85,12 +87,12 @@ const Matrix2f Particle::cauchyStress(){
 	temp2.diag_sum(lambda*det_elastic*(det_elastic-1));
 	return -volume * temp2;
 }
-const Vector2f Particle::deltaForce(Matrix2f& del_elastic, Matrix2f& del_rotate, const Vector2f& u, const Vector2f& weight_grad){
+const Vector2f Particle::deltaForce(const Vector2f& u, const Vector2f& weight_grad){
 	//For detailed explanation, check out the implicit math pdf for details
 	//Before we do the force calculation, we need deltaF, deltaR, and delta(JF^-T)
 	
 	//Finds delta(Fe), where Fe is the elastic deformation gradient
-	del_elastic.setData(def_elastic);
+	Matrix2f del_elastic = def_elastic;
 	del_elastic *= TIMESTEP*u.dot(weight_grad);
 
 	//Compute R^T*dF - dF^TR
@@ -105,7 +107,7 @@ const Vector2f Particle::deltaForce(Matrix2f& del_elastic, Matrix2f& del_rotate,
 	//In the case of 2D, we only need to solve for one variable (three for 3D)
 	float x = y / (polar_s[0][0] + polar_s[1][1]);
 	//Final computation is deltaR = R*(R^T*dR)
-	del_rotate.setData(
+	Matrix2f del_rotate = Matrix2f(
 		-polar_r[1][0]*x, polar_r[0][0]*x,
 		-polar_r[1][1]*x, polar_r[0][1]*x
 	);

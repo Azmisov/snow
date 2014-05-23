@@ -35,7 +35,6 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 
 # Object Files
 OBJECTFILES= \
-	${OBJECTDIR}/Collider.o \
 	${OBJECTDIR}/Grid.o \
 	${OBJECTDIR}/Matrix2f.o \
 	${OBJECTDIR}/Particle.o \
@@ -67,11 +66,6 @@ LDLIBSOPTIONS=
 ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/snowsim: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
 	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/snowsim ${OBJECTFILES} ${LDLIBSOPTIONS} glfw3/libglfw3.a -lGL -lX11 -lXxf86vm -lm -lpthread -lXrandr -lXi
-
-${OBJECTDIR}/Collider.o: Collider.cpp 
-	${MKDIR} -p ${OBJECTDIR}
-	${RM} $@.d
-	$(COMPILE.cc) -g -MMD -MP -MF $@.d -o ${OBJECTDIR}/Collider.o Collider.cpp
 
 ${OBJECTDIR}/Grid.o: Grid.cpp 
 	${MKDIR} -p ${OBJECTDIR}

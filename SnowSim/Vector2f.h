@@ -8,7 +8,7 @@ class Matrix2f;
 class Vector2f {
 public:
 	//Variables
-	float loc[2];
+	float data[2];
 	
 	//Constructors
 	Vector2f();
@@ -18,9 +18,9 @@ public:
 	virtual ~Vector2f();
 	
 	//Operations
-	void setPosition(float val);
-	void setPosition(float x, float y);
-	void setPosition(const Vector2f &v);
+	void setData(float val);
+	void setData(float x, float y);
+	void setData(const Vector2f &v);
 	
 	void normalize();
 	const float dot(const Vector2f &v) const;

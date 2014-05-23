@@ -14,46 +14,7 @@ int point_size;
 PointCloud* snow;
 Grid* grid;
 
-int main(int argc, char** argv) {
-	//Conjugate test
-	Matrix2f A = Matrix2f(5, 6, 7, 8);
-	Vector2f b = Vector2f(84, 116);
-	Vector2f x = Vector2f(b);
-	
-	Vector2f r = b-A*x;
-	Vector2f p = r;
-	Vector2f Ap = A*p;
-	Vector2f Ar = A*r;
-	double rAr = r.dot(Ar);
-	
-	int iterations = 0;
-	Vector2f error = Vector2f(100);
-	while (error.length() > 0.0001){
-		float alpha = rAr / (Ap.dot(Ap));
-		error = alpha*p;
-		x += error;
-		//Update residual
-		r -= alpha*Ap;
-		Ar = A*r;
-		//Compute new gradient
-		double temp = r.dot(Ar);
-		double beta = temp / rAr;
-		rAr = temp;
-		p = r + beta*p;
-		Ap = Ar + beta*Ap;
-		
-		iterations++;
-	}
-	
-	cout << "ITERS = " << iterations << endl;
-	cout << "Error = " << error.length() << endl;
-	cout << x[0] << ", " << x[1] << endl;
-	Vector2f b_test = A*x;
-	cout << "TARGET = " << b[0] << ", " << b[1] << endl;
-	cout << "RESULT = " << b_test[0] << ", " << b_test[1] << endl;
-	
-	return 0;
-	
+int main(int argc, char** argv) {	
 	//Create GLFW window
 	GLFWwindow* window;
 	glfwSetErrorCallback(error_callback);
@@ -158,7 +119,7 @@ void redraw(){
 	glBegin(GL_POINTS);
 	for (int i=0; i<grid->size[0]; i++){
 		for (int j=0; j<grid->size[1]; j++)
-			glVertex2fv((grid->origin+grid->cellsize*Vector2f(i, j)).loc);
+			glVertex2fv((grid->origin+grid->cellsize*Vector2f(i, j)).data);
 	}
 	glEnd();
 	
@@ -172,7 +133,7 @@ void redraw(){
 		//Max density set to 160+DENSITY
 		float density = 1 - p.density/(160+DENSITY);
 		glColor3f(0, density < 0 ? 0 : density, 1);
-		glVertex2fv(p.position.loc);
+		glVertex2fv(p.position.data);
 	}
 	glEnd();
 	glDisable(GL_POINT_SMOOTH);
