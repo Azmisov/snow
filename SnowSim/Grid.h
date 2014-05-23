@@ -8,7 +8,7 @@
 #include <cstring>
 #include <stdio.h>
 
-const float BSPLINE_EPSILON = 1e-6;
+const float BSPLINE_EPSILON = 1e-4;
 
 //Grid node data
 typedef struct GridNode{
@@ -56,29 +56,31 @@ public:
 	//Cubic B-spline shape/basis/interpolation function
 	//A smooth curve from (0,1) to (1,0)
 	static float bspline(float x){
+		x = fabs(x);
 		float w;
 		if (x < 1)
 			w = x*x*(x/2 - 1) + 2/3.0;
 		else if (x < 2)
 			w = x*(x*(-x/6 + 1) - 2) + 4/3.0;
 		else return 0;
-		//Clamp between 0-1
+		//Clamp between 0 and 1
 		if (w < BSPLINE_EPSILON) return 0;
 		if (w > 1) return 1;
 		return w;
 	}
 	//Slope of interpolation function
 	static float bsplineSlope(float x){
+		bool neg = x < 0;
+		x = fabs(x);
 		float w;
 		if (x < 1)
 			w = x*(3/2.0*x - 2);
 		else if (x < 2)
 			w = x*(2 - x/2) - 2;
 		else return 0;
-		//Clamp between 0-1
-		if (w < BSPLINE_EPSILON) return 0;
-		if (w > 1) return 1;
-		return w;
+		//Clamp between -2/3 and 0
+		if (w > 0) return 0;
+		return neg ? -w : w;
 	}
 };
 

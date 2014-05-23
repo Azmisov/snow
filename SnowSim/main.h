@@ -14,7 +14,7 @@
 #include "Grid.h"
 
 //Various compiler options
-#define SUPPORTS_POINT_SMOOTH 0
+#define SUPPORTS_POINT_SMOOTH 1
 #define SCREENCAST 0
 #if SCREENCAST
 #include <FreeImage.h>

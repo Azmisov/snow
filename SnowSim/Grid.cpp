@@ -35,13 +35,13 @@ void Grid::initializeMass(){
 		//so we do computations within a 2x2 square for each particle
 		for (int idx=0, y=oy-1, y_end=oy+2; y<=y_end; y++){
 			//Y-dimension interpolation
-			float y_pos = fabs(y-oy),
+			float y_pos = y-oy,
 				wy = Grid::bspline(y_pos),
 				dy = Grid::bsplineSlope(y_pos);
 			
 			for (int x=ox-1, x_end=ox+2; x<=x_end; x++, idx++){
 				//X-dimension interpolation
-				float x_pos = fabs(x-ox),
+				float x_pos = x-ox,
 					wx = Grid::bspline(x_pos),
 					dx = Grid::bsplineSlope(x_pos);
 				
@@ -162,12 +162,11 @@ void Grid::explicitVelocities(const Vector2f& gravity){
 				const int border_layers = 4;
 				Vector2f new_pos = node.velocity_new*delta_scale + Vector2f(x, y);
 				//Left border, right border
-				if (new_pos[0] < border_layers-1 || new_pos[0] > size[0]-border_layers){
-					node.velocity_new[0] = -node.velocity_new[0];
-				}
+				if (new_pos[0] < border_layers-1 || new_pos[0] > size[0]-border_layers)
+					node.velocity_new[0] = 0;//-node.velocity_new[0];
 				//Bottom border
 				if (new_pos[1] < border_layers-1 || new_pos[1] > size[1]-border_layers)
-					node.velocity_new[1] = -node.velocity_new[1];
+					node.velocity_new[1] = 0;//-node.velocity_new[1];
 			}
 		}
 	}
@@ -227,12 +226,14 @@ void Grid::implicitVelocities(){
 			if (n.active){
 				//Alright, so we'll handle each node's solve separately
 				//First thing to do is update our vf guess
-				float alpha = n.rEr / (n.Ep.dot(n.Ep));
+				float div = n.Ep.dot(n.Ep);
+				float alpha = n.rEr / div;
 				n.err = alpha*n.p;
 				//If the error is small enough, we're done
-				if (n.err[0]*n.err[0] + n.err[1]*n.err[1] <= MAX_IMPLICIT_ERR){
+				float err = n.err.length();
+				if (err < MAX_IMPLICIT_ERR || err > MIN_IMPLICIT_ERR || isnan(err)){
 					n.active = false;
-					break;
+					continue;
 				}
 				else done = false;
 				//Update vf and residual

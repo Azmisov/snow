@@ -24,7 +24,7 @@ public:
 	//Get bounding box [xmin, xmax, ymin, ymax]
 	void bounds(float bounds[4]);
 	
-	//Generate square of particles (starting at 0,0 spaced 1 unit apart)
+	//Generate square of particles (starting at 0,0)
 	static PointCloud* createSquare(float mpdim, int ppdim){
 		PointCloud *obj = new PointCloud(ppdim*ppdim);
 
@@ -38,9 +38,10 @@ public:
 			mu = YOUNGS_MODULUS/(2+2*POISSONS_RATIO);
 		for (int x=0, n=0; x<ppdim; x++){
 			for (int y=0; y<ppdim; y++){
+				float adjust = (rand() % 6000)*(fabs(x-ppdim/2.0) + fabs(y-ppdim/2.0))/ppdim;
 				obj->particles.push_back(Particle(
 					Vector2f(x*spacing, y*spacing),
-					Vector2f(6,0), m, lambda+1000*x+1000*y, mu+1000*x+1000*y //
+					Vector2f(0,-5), m, lambda+adjust, mu+adjust
 				));
 			}
 		}

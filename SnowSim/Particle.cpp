@@ -92,8 +92,13 @@ const Vector2f Particle::deltaForce(const Vector2f& u, const Vector2f& weight_gr
 	//Before we do the force calculation, we need deltaF, deltaR, and delta(JF^-T)
 	
 	//Finds delta(Fe), where Fe is the elastic deformation gradient
-	Matrix2f del_elastic = def_elastic;
-	del_elastic *= TIMESTEP*u.dot(weight_grad);
+	//Probably can optimize this expression with parentheses...
+	Matrix2f del_elastic = TIMESTEP*u.dyadic_product(weight_grad)*def_elastic;
+	
+	//Check to make sure we should do these calculations?
+	if (del_elastic[0][0] < MATRIX_EPSILON && del_elastic[0][1] < MATRIX_EPSILON &&
+		del_elastic[1][0] < MATRIX_EPSILON && del_elastic[1][1] < MATRIX_EPSILON)
+		return Vector2f(0);
 
 	//Compute R^T*dF - dF^TR
 	//It is skew symmetric, so we only need to compute one value (three for 3D)

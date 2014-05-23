@@ -46,12 +46,13 @@ int main(int argc, char** argv) {
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	
 	//Setup simulation data
+	srand(time(NULL));
 	const float mpdim = .25;		//meters in each dimension
-	const int ppdim = 60;			//particle count for each dimension
+	const int ppdim = 40;			//particle count for each dimension
 	snow = PointCloud::createSquare(mpdim, ppdim);
 	snow->translate(Vector2f(.75-mpdim/2*(ppdim != 1), 1));
 	//Adjust visualization size to fill area
-	point_size = WIN_SIZE/WIN_METERS*mpdim/ppdim-1;
+	point_size = WIN_SIZE/WIN_METERS*mpdim/ppdim+2;
 	if (point_size < 1)
 		point_size = 1;
 	else if (point_size > 20)
@@ -155,6 +156,8 @@ void *simulate(void *args){
 		grid->initializeVelocities();
 		//Compute grid velocities
 		grid->explicitVelocities(gravity);
+		if (IMPLICIT_RATIO > 0)
+			grid->implicitVelocities();
 		//Map back to particles
 		grid->updateVelocities();
 		//Update particle data
