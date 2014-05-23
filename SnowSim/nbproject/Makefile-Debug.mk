@@ -39,6 +39,7 @@ OBJECTFILES= \
 	${OBJECTDIR}/Matrix2f.o \
 	${OBJECTDIR}/Particle.o \
 	${OBJECTDIR}/PointCloud.o \
+	${OBJECTDIR}/Shape.o \
 	${OBJECTDIR}/Vector2f.o \
 	${OBJECTDIR}/main.o
 
@@ -65,7 +66,7 @@ LDLIBSOPTIONS=
 
 ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/snowsim: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
-	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/snowsim ${OBJECTFILES} ${LDLIBSOPTIONS} glfw3/libglfw3.a -lGL -lX11 -lXxf86vm -lm -lpthread -lXrandr -lXi -lfreeimage
+	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/snowsim ${OBJECTFILES} ${LDLIBSOPTIONS} glfw3/libglfw3.a -lGL -lX11 -lXxf86vm -lm -lpthread -lXrandr -lXi
 
 ${OBJECTDIR}/Grid.o: Grid.cpp 
 	${MKDIR} -p ${OBJECTDIR}
@@ -86,6 +87,11 @@ ${OBJECTDIR}/PointCloud.o: PointCloud.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} $@.d
 	$(COMPILE.cc) -g -MMD -MP -MF $@.d -o ${OBJECTDIR}/PointCloud.o PointCloud.cpp
+
+${OBJECTDIR}/Shape.o: Shape.cpp 
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} $@.d
+	$(COMPILE.cc) -g -MMD -MP -MF $@.d -o ${OBJECTDIR}/Shape.o Shape.cpp
 
 ${OBJECTDIR}/Vector2f.o: Vector2f.cpp 
 	${MKDIR} -p ${OBJECTDIR}

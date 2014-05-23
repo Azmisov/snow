@@ -1,4 +1,5 @@
 #include "main.h"
+#include "Shape.h"
 
 using namespace std;
 
@@ -10,11 +11,15 @@ int frame_count = 0,
 unsigned char* img_buffer;
 
 //Simulation data
+bool simulating = false;
+vector<Shape*> snow_shapes;
 int point_size;
 PointCloud* snow;
 Grid* grid;
 
-int main(int argc, char** argv) {	
+int main(int argc, char** argv) {
+	srand(time(NULL));
+	
 	//Create GLFW window
 	GLFWwindow* window;
 	glfwSetErrorCallback(error_callback);
@@ -27,6 +32,7 @@ int main(int argc, char** argv) {
 	}
 	glfwMakeContextCurrent(window);
 	glfwSetKeyCallback(window, key_callback);
+	glfwSetMouseButtonCallback(window, mouse_callback);
 	
 	//Center window on screen
 	const GLFWvidmode* monitor = glfwGetVideoMode(glfwGetPrimaryMonitor());
@@ -39,35 +45,6 @@ int main(int argc, char** argv) {
 	glLoadIdentity();
 	glViewport(0, 0, WIN_SIZE, WIN_SIZE);
 	glOrtho(0, WIN_METERS, 0, WIN_METERS, 0, 1);
-	
-	//Set default visualization parameters
-	glClearColor(1, 1, 1, 1);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	
-	//Setup simulation data
-	srand(time(NULL));
-	const float mpdim = .25;		//meters in each dimension
-	const int ppdim = 60;			//particle count for each dimension
-	snow = PointCloud::createSquare(mpdim, ppdim);
-	snow->translate(Vector2f(.75-mpdim/2*(ppdim != 1), 1));
-	//Adjust visualization size to fill area
-	point_size = WIN_SIZE/WIN_METERS*mpdim/ppdim+3;
-	if (point_size < 1)
-		point_size = 1;
-	else if (point_size > 20)
-		point_size = 20;
-	if (!SUPPORTS_POINT_SMOOTH)
-		point_size += 2;
-	
-	grid = new Grid(Vector2f(0), Vector2f(WIN_METERS, WIN_METERS), Vector2f(100), snow);
-	//We need to estimate particle volumes before we start
-	grid->initializeMass();	
-	grid->calculateVolumes();
-	
-	//Create default simulation loop
-	pthread_t sim_thread;
-	pthread_create(&sim_thread, NULL, simulate, NULL);
 	
 	//Drawing & event loop
 	//Create directory to save buffers in
@@ -82,7 +59,8 @@ int main(int argc, char** argv) {
 			redraw();
 			dirty_buffer = false;
 #if SCREENCAST
-			save_buffer(frame_count++);
+			if (simulating)
+				save_buffer(frame_count++);
 #endif
 		}
 		glfwSwapBuffers(window);
@@ -106,42 +84,127 @@ static void error_callback(int error, const char* description){
 }
 //Key listener
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods){
+	if (action != GLFW_RELEASE)
+		return;
     switch (key){
+		case GLFW_KEY_F12:
+			//Create default simulation loop
+			start_simulation();
+			break;
+		case GLFW_KEY_ESCAPE:
+			remove_all_shapes();
+			if (simulating)
+				simulating = false;
+			dirty_buffer = true;
+			break;
+		case GLFW_KEY_ENTER:
+			if (!simulating)
+				create_new_shape();
+			break;
 		default: return;
 	}
 }
-
-void redraw(){
-	glClear(GL_COLOR_BUFFER_BIT);
-		
-	//Grid nodes
-	glPointSize(1);
-	glColor3f(1, 0, 0);
-	glBegin(GL_POINTS);
-	for (int i=0; i<grid->size[0]; i++){
-		for (int j=0; j<grid->size[1]; j++)
-			glVertex2fv((grid->origin+grid->cellsize*Vector2f(i, j)).data);
+//Mouse listener
+void mouse_callback(GLFWwindow* window, int btn, int action, int mods){
+	if (action == GLFW_RELEASE && btn == GLFW_MOUSE_BUTTON_LEFT){
+		//Create a snow shape, if none exist
+		if (snow_shapes.empty())
+			create_new_shape();
+		//Add vertex to the shape
+		double x, y;
+		glfwGetCursorPos(window, &x, &y);
+		//Convert screen coordinates to world
+		y = (1-y/WIN_SIZE)*WIN_METERS;
+		x = x/WIN_SIZE*WIN_METERS;
+		snow_shapes.back()->addPoint(x, y);
+		dirty_buffer = true;
 	}
-	glEnd();
-	
-	//Snow particles
-	if (SUPPORTS_POINT_SMOOTH)
-		glEnable(GL_POINT_SMOOTH);
-	glPointSize(point_size);
-	glBegin(GL_POINTS);
-	for (int i=0; i<snow->size; i++){
-		Particle& p = snow->particles[i];
-		//We can use the particle's density to vary color
-		//Max density set to 160+DENSITY
-		float density = 1 - p.density/(160+DENSITY);
-		glColor3f(0, density < 0 ? 0 : density, 1);
-		glVertex2fv(p.position.data);
-	}
-	glEnd();
-	glDisable(GL_POINT_SMOOTH);
 }
 
+//Creates another snow shape for editing
+void create_new_shape(){
+	snow_shapes.push_back(new Shape());
+}
+//Removes all snow shapes
+void remove_all_shapes(){
+	for (int i=0, len=snow_shapes.size(); i<len; i++)
+		delete snow_shapes[i];
+	snow_shapes.clear();
+}
+
+void redraw(){
+	glClearColor(1, 1, 1, 1);
+	glClear(GL_COLOR_BUFFER_BIT);
+	
+	if (simulating){
+		//Grid nodes
+		glPointSize(1);
+		glColor3f(1, 0, 0);
+		glBegin(GL_POINTS);
+		for (int i=0; i<grid->size[0]; i++){
+			for (int j=0; j<grid->size[1]; j++)
+				glVertex2fv((grid->origin+grid->cellsize*Vector2f(i, j)).data);
+		}
+		glEnd();
+
+		//Snow particles
+		if (SUPPORTS_POINT_SMOOTH)
+			glEnable(GL_POINT_SMOOTH);
+		glPointSize(point_size);
+		glBegin(GL_POINTS);
+		for (int i=0; i<snow->size; i++){
+			Particle& p = snow->particles[i];
+			//We can use the particle's density to vary color
+			//Max density set to 160+DENSITY
+			float density = 1 - p.density/(160+DENSITY);
+			glColor3f(0, density < 0 ? 0 : density, 1);
+			glVertex2fv(p.position.data);
+		}
+		glEnd();
+		if (SUPPORTS_POINT_SMOOTH)
+			glDisable(GL_POINT_SMOOTH);
+	}
+	else{
+		for (int i=0, l=snow_shapes.size(); i<l; i++)
+			snow_shapes[i]->draw();
+	}
+}
+
+void start_simulation(){
+	/* SQUARE SNOW
+	//meters in each dimension
+	const float mpdim = .25;
+	//particle count for each dimension
+	const int ppdim = 60;
+	snow = PointCloud::createSquare(mpdim, ppdim, Vector2f(0));
+	snow->translate(Vector2f(.75-mpdim/2*(ppdim != 1), 1));
+	//Adjust visualization size to fill area
+	point_size = WIN_SIZE/WIN_METERS*mpdim/ppdim+3;
+	if (point_size < 1)
+		point_size = 1;
+	else if (point_size > 20)
+		point_size = 20;
+	if (!SUPPORTS_POINT_SMOOTH)
+		point_size += 2;
+	//*/
+	
+	//* SHAPE SNOW
+	snow = PointCloud::createShape(snow_shapes, 7000, Vector2f(0));
+	//If there are no shapes, we can't do a simulation
+	if (snow == NULL) return;
+	point_size = 5;
+	//*/
+	
+	grid = new Grid(Vector2f(0), Vector2f(WIN_METERS, WIN_METERS), Vector2f(100), snow);
+	//We need to estimate particle volumes before we start
+	grid->initializeMass();	
+	grid->calculateVolumes();
+	
+	pthread_t sim_thread;
+	pthread_create(&sim_thread, NULL, simulate, NULL);
+}
 void *simulate(void *args){
+	simulating = true;
 	clock_t start = clock();
 	cout << "Starting simulation..." << endl;
 	Vector2f gravity = Vector2f(0, -9.8);
@@ -153,7 +216,7 @@ void *simulate(void *args){
 #endif
 	
 	int iter = 0, redraw_every = REDRAW_EVERY;
-	while(++iter > 0){
+	while (simulating && ++iter > 0){
 	//for (int i=0; i<550; i++){
 		//Initialize FEM grid
 		grid->initializeMass();
@@ -176,6 +239,7 @@ void *simulate(void *args){
 	}
 
 	cout << "Simulation complete: " << (clock()-start)/(float) CLOCKS_PER_SEC << " seconds" << endl;
+	simulating = false;
 	pthread_exit(NULL);
 }
 

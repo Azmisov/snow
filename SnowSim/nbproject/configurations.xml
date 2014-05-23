@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configurationDescriptor version="90">
+<configurationDescriptor version="88">
   <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
@@ -8,6 +8,7 @@
       <itemPath>Matrix2f.h</itemPath>
       <itemPath>Particle.h</itemPath>
       <itemPath>PointCloud.h</itemPath>
+      <itemPath>Shape.h</itemPath>
       <itemPath>SimConstants.h</itemPath>
       <itemPath>Vector2f.h</itemPath>
       <itemPath>main.h</itemPath>
@@ -23,6 +24,7 @@
       <itemPath>Matrix2f.cpp</itemPath>
       <itemPath>Particle.cpp</itemPath>
       <itemPath>PointCloud.cpp</itemPath>
+      <itemPath>Shape.cpp</itemPath>
       <itemPath>Vector2f.cpp</itemPath>
       <itemPath>main.cpp</itemPath>
     </logicalFolder>
@@ -53,13 +55,12 @@
   <confs>
     <conf name="Debug" type="1">
       <toolsSet>
+        <remote-sources-mode>LOCAL_SOURCES</remote-sources-mode>
         <compilerSet>default</compilerSet>
-        <dependencyChecking>true</dependencyChecking>
-        <rebuildPropChanged>false</rebuildPropChanged>
       </toolsSet>
       <compileType>
         <linkerTool>
-          <commandLine>glfw3/libglfw3.a -lGL -lX11 -lXxf86vm -lm -lpthread -lXrandr -lXi -lfreeimage</commandLine>
+          <commandLine>glfw3/libglfw3.a -lGL -lX11 -lXxf86vm -lm -lpthread -lXrandr -lXi</commandLine>
         </linkerTool>
       </compileType>
       <item path="Grid.cpp" ex="false" tool="1" flavor2="0">
@@ -78,6 +79,10 @@
       </item>
       <item path="PointCloud.h" ex="false" tool="3" flavor2="0">
       </item>
+      <item path="Shape.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="Shape.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="SimConstants.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="Vector2f.cpp" ex="false" tool="1" flavor2="0">
@@ -91,9 +96,8 @@
     </conf>
     <conf name="Release" type="1">
       <toolsSet>
+        <remote-sources-mode>LOCAL_SOURCES</remote-sources-mode>
         <compilerSet>default</compilerSet>
-        <dependencyChecking>true</dependencyChecking>
-        <rebuildPropChanged>false</rebuildPropChanged>
       </toolsSet>
       <compileType>
         <cTool>
@@ -109,7 +113,7 @@
           <developmentMode>5</developmentMode>
         </asmTool>
         <linkerTool>
-          <commandLine>glfw3/libglfw3.a -lGL -lX11 -lXxf86vm -lm -lpthread -lXrandr -lXi -lfreeimage</commandLine>
+          <commandLine>glfw3/libglfw3.a -lGL -lX11 -lXxf86vm -lm -lpthread -lXrandr -lXi</commandLine>
         </linkerTool>
       </compileType>
       <item path="Grid.cpp" ex="false" tool="1" flavor2="0">
@@ -127,6 +131,10 @@
       <item path="PointCloud.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="PointCloud.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="Shape.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="Shape.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="SimConstants.h" ex="false" tool="3" flavor2="0">
       </item>

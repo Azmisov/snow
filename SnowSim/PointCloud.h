@@ -4,6 +4,13 @@
 #include <vector>
 #include "SimConstants.h"
 #include "Particle.h"
+#include "Shape.h"
+
+#define VOLUME_EPSILON 1e-5
+
+inline float random_number(float lo, float hi){
+	 return lo + rand() / (float) (RAND_MAX/(hi-lo));
+}
 
 class PointCloud {
 public:
@@ -25,7 +32,7 @@ public:
 	void bounds(float bounds[4]);
 	
 	//Generate square of particles (starting at 0,0)
-	static PointCloud* createSquare(float mpdim, int ppdim){
+	static PointCloud* createSquare(float mpdim, int ppdim, Vector2f velocity){
 		PointCloud *obj = new PointCloud(ppdim*ppdim);
 
 		float spacing = ppdim == 1 ? 0 : mpdim/(ppdim-1);
@@ -41,10 +48,68 @@ public:
 				float adjust = (rand() % 6000)*(fabs(x-ppdim/2.0) + fabs(y-ppdim/2.0))/ppdim;
 				obj->particles.push_back(Particle(
 					Vector2f(x*spacing, y*spacing),
-					Vector2f(0,-5), m, lambda+adjust, mu+adjust
+					Vector2f(velocity), m, lambda+adjust, mu+adjust
 				));
 			}
 		}
+		return obj;
+	}
+	
+	//Generate particles that fill a set of shapes
+	static PointCloud* createShape(std::vector<Shape*>& snow_shapes, int particles, Vector2f velocity){
+		//Compute area of all the snow shapes
+		float volume = 0;
+		int len = snow_shapes.size(), num_shapes = 0;
+		for (int i=0; i<len; i++){
+			float indi_volume = snow_shapes[i]->volume();
+			if (indi_volume > VOLUME_EPSILON && snow_shapes[i]->vertices.size() > 2){
+				num_shapes++;
+				volume += indi_volume;
+			}
+		}
+		//If there is no volume, we can't really do a snow sim
+		if (volume < 1e-5)
+			return NULL;
+		
+		//Lame parameters
+		float lambda = YOUNGS_MODULUS*POISSONS_RATIO/((1+POISSONS_RATIO)*(1-2*POISSONS_RATIO)),
+			mu = YOUNGS_MODULUS/(2+2*POISSONS_RATIO);
+		
+		//Otherwise, create our object
+		PointCloud *obj = new PointCloud(particles);
+		//Use volume to estimate mass per particle
+		float mass = volume*DENSITY/particles;
+		//Randomly scatter points
+		float bounds[4];
+		int shape_num = 0, total_points = 0;
+		for (int i=0; i<len; i++){
+			float v = snow_shapes[i]->volume();
+			if (v > VOLUME_EPSILON && snow_shapes[i]->vertices.size() > 2){
+				int points;
+				//Points given to each shape is proportional to their area
+				if (++shape_num < num_shapes)
+					points = v*particles/volume;
+				//Last shape gets remainder, so we don't have round-off errors
+				else points = particles-total_points;
+				total_points += points;
+				
+				//Randomly scatter points in the shape until the quota is met
+				snow_shapes[i]->bounds(bounds);
+				int points_found = 0;
+				while (points_found != points){
+					float tx = random_number(bounds[0], bounds[1]);
+					float ty = random_number(bounds[2], bounds[3]);
+					//Check if this point is inside the shape
+					if (snow_shapes[i]->contains(tx, ty)){
+						obj->particles.push_back(Particle(
+							Vector2f(tx, ty), Vector2f(velocity), mass, lambda, mu
+						));
+						points_found++;
+					}
+				}
+			}
+		}
+		
 		return obj;
 	}
 };
