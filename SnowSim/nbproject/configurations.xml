@@ -60,7 +60,7 @@
       </toolsSet>
       <compileType>
         <linkerTool>
-          <commandLine>glfw3/libglfw3.a -lGL -lX11 -lXxf86vm -lm -lpthread -lXrandr -lXi</commandLine>
+          <commandLine>glfw3/libglfw3.a freeimage/libfreeimage.a -lGL -lX11 -lXxf86vm -lm -lpthread -lXrandr -lXi</commandLine>
         </linkerTool>
       </compileType>
       <item path="Grid.cpp" ex="false" tool="1" flavor2="0">
@@ -113,7 +113,7 @@
           <developmentMode>5</developmentMode>
         </asmTool>
         <linkerTool>
-          <commandLine>glfw3/libglfw3.a -lGL -lX11 -lXxf86vm -lm -lpthread -lXrandr -lXi</commandLine>
+          <commandLine>glfw3/libglfw3.a freeimage/libfreeimage.a -lGL -lX11 -lXxf86vm -lm -lpthread -lXrandr -lXi</commandLine>
         </linkerTool>
       </compileType>
       <item path="Grid.cpp" ex="false" tool="1" flavor2="0">

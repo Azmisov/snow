@@ -75,29 +75,6 @@ void Grid::initializeVelocities(){
 			}
 		}
 	}
-	
-	/* Implicit update only:
-	//Particles need the velocity gradient to compute stress forces
-	//This is only temporary; the actual "resolved" velocity gradient
-	//is computed in updateVelocities()
-	for (int i=0; i<obj->size; i++){
-		//Reset gradient to zero
-		Particle& p = obj->particles[i];
-		Matrix2f& grad = p.velocity_gradient;
-		grad.setData(0.0);
-		
-		int ox = p.grid_position[0],
-			oy = p.grid_position[1];
-		for (int idx=0, y=oy-1, y_end=oy+2; y<=y_end; y++){
-			for (int x=ox-1, x_end=ox+2; x<=x_end; x++, idx++){
-				float w = p.weights[idx];
-				if (w > BSPLINE_EPSILON){
-					grad += nodes[(int) (y*size[0]+x)].velocity.trans_product(p.weight_gradient[idx]);
-				}
-			}
-		}
-	}
-	*/
 }
 //Maps volume from the grid to particles
 //This should only be called once, at the beginning of the simulation

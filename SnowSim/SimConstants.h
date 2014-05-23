@@ -15,5 +15,13 @@ static const float
 	MAX_IMPLICIT_ERR = 1e4,		//Maximum allowed error for conjugate residual
 	MIN_IMPLICIT_ERR = 1e-4;	//Minimum allowed error for conjugate residual
 
+//Various compiler options
+#define LIMIT_FPS 1
+#define FPS 60
+#define REDRAW_EVERY LIMIT_FPS ? 1/TIMESTEP/FPS : 1;
+#define REALTIME_PLAYBACK 0
+#define SUPPORTS_POINT_SMOOTH 0
+#define SCREENCAST 1
+
 #endif
 

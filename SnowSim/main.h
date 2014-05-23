@@ -12,17 +12,8 @@
 #include "Particle.h"
 #include "PointCloud.h"
 #include "Grid.h"
-
-//Various compiler options
-#define LIMIT_FPS 0
-#define FPS 30
-#define REDRAW_EVERY LIMIT_FPS ? 1/TIMESTEP/FPS : 1;
-#define REALTIME_PLAYBACK 0
-#define SUPPORTS_POINT_SMOOTH 0
-#define SCREENCAST 0
-#if SCREENCAST
-#include <FreeImage.h>
-#endif
+#include "SimConstants.h"
+#include "freeimage/FreeImage.h"
 
 #define WIN_SIZE 640
 #define WIN_METERS 1.5

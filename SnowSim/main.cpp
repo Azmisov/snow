@@ -238,7 +238,7 @@ void *simulate(void *args){
 #endif
 	}
 
-	cout << "Simulation complete: " << (clock()-start)/(float) CLOCKS_PER_SEC << " seconds" << endl;
+	cout << "Simulation complete: " << (clock()-start)/(float) CLOCKS_PER_SEC << " seconds\n" << endl;
 	simulating = false;
 	pthread_exit(NULL);
 }
