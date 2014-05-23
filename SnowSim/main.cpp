@@ -48,17 +48,17 @@ int main(int argc, char** argv) {
 	//Setup simulation data
 	srand(time(NULL));
 	const float mpdim = .25;		//meters in each dimension
-	const int ppdim = 40;			//particle count for each dimension
+	const int ppdim = 60;			//particle count for each dimension
 	snow = PointCloud::createSquare(mpdim, ppdim);
 	snow->translate(Vector2f(.75-mpdim/2*(ppdim != 1), 1));
 	//Adjust visualization size to fill area
-	point_size = WIN_SIZE/WIN_METERS*mpdim/ppdim+2;
+	point_size = WIN_SIZE/WIN_METERS*mpdim/ppdim+3;
 	if (point_size < 1)
 		point_size = 1;
 	else if (point_size > 20)
 		point_size = 20;
 	if (!SUPPORTS_POINT_SMOOTH)
-		point_size *= 3;
+		point_size += 2;
 	
 	grid = new Grid(Vector2f(0), Vector2f(WIN_METERS, WIN_METERS), Vector2f(100), snow);
 	//We need to estimate particle volumes before we start
@@ -125,7 +125,8 @@ void redraw(){
 	glEnd();
 	
 	//Snow particles
-	glEnable(GL_POINT_SMOOTH);
+	if (SUPPORTS_POINT_SMOOTH)
+		glEnable(GL_POINT_SMOOTH);
 	glPointSize(point_size);
 	glBegin(GL_POINTS);
 	for (int i=0; i<snow->size; i++){
@@ -145,11 +146,14 @@ void *simulate(void *args){
 	cout << "Starting simulation..." << endl;
 	Vector2f gravity = Vector2f(0, -9.8);
 
+#if REALTIME_PLAYBACK
 	struct timespec sleep_duration;
 	sleep_duration.tv_sec = 0;
 	sleep_duration.tv_nsec = TIMESTEP*1e9;
+#endif
 	
-	while(true){
+	int iter = 0, redraw_every = REDRAW_EVERY;
+	while(++iter > 0){
 	//for (int i=0; i<550; i++){
 		//Initialize FEM grid
 		grid->initializeMass();
@@ -163,9 +167,12 @@ void *simulate(void *args){
 		//Update particle data
 		snow->update();
 		//Redraw snow
-		dirty_buffer = true;
+		if (iter % redraw_every == 0)
+			dirty_buffer = true;
+#if REALTIME_PLAYBACK
 		//Delay... (if doing realtime visualization)
-		//nanosleep(&sleep_duration, NULL);
+		nanosleep(&sleep_duration, NULL);
+#endif
 	}
 
 	cout << "Simulation complete: " << (clock()-start)/(float) CLOCKS_PER_SEC << " seconds" << endl;
