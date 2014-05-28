@@ -1,5 +1,4 @@
 #include "main.h"
-#include "Shape.h"
 
 using namespace std;
 
@@ -9,6 +8,10 @@ bool dirty_buffer = true;
 int frame_count = 0,
 	bsize = 3*WIN_SIZE*WIN_SIZE;
 unsigned char* img_buffer;
+
+//Circle drawing
+int circle_draw_state = 0;
+Vector2f circle_origin;
 
 //Simulation data
 bool simulating = false;
@@ -101,6 +104,10 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 			if (!simulating)
 				create_new_shape();
 			break;
+		case GLFW_KEY_C:
+			if (!simulating)
+				circle_draw_state = 1;
+			break;
 		default: return;
 	}
 }
@@ -116,7 +123,40 @@ void mouse_callback(GLFWwindow* window, int btn, int action, int mods){
 		//Convert screen coordinates to world
 		y = (1-y/WIN_SIZE)*WIN_METERS;
 		x = x/WIN_SIZE*WIN_METERS;
-		snow_shapes.back()->addPoint(x, y);
+		//Regular point
+		switch (circle_draw_state){
+			//Regular point
+			case 0:
+				snow_shapes.back()->addPoint(x, y);
+				break;
+			//Circle origin
+			case 1:
+				circle_origin.setData(x, y);
+				circle_draw_state = 2;
+				break;
+			//Circle radius
+			case 2:
+				const int segments = 12;
+				//Cool circle algorithm: http://slabode.exofire.net/circle_draw.shtml
+				float x_dif = circle_origin[0] - x,
+					y_dif = circle_origin[1] - y,
+					radius = sqrt(x_dif*x_dif + y_dif*y_dif),
+					theta = 6.283185307 / (float) segments,
+					tan_fac = tan(theta),
+					cos_fac = cos(theta),
+					x = radius,
+					y = 0;
+				for (int i=0; i<segments; i++){
+					snow_shapes.back()->addPoint(x+circle_origin[0], y+circle_origin[1]);
+					float flip_x = -y, flip_y = x;
+					x += flip_x*tan_fac;
+					y += flip_y*tan_fac;
+					x *= cos_fac;
+					y *= cos_fac;
+				}
+				circle_draw_state = 0;
+				break;
+		}
 		dirty_buffer = true;
 	}
 }
@@ -165,6 +205,13 @@ void redraw(){
 			glDisable(GL_POINT_SMOOTH);
 	}
 	else{
+		if (circle_draw_state == 2){
+			glPointSize(10);
+			glColor3f(1, 0, 0);
+			glBegin(GL_POINTS);
+				glVertex2fv(circle_origin.data);
+			glEnd();
+		}
 		for (int i=0, l=snow_shapes.size(); i<l; i++)
 			snow_shapes[i]->draw();
 	}
@@ -189,7 +236,7 @@ void start_simulation(){
 	//*/
 	
 	//* SHAPE SNOW
-	snow = PointCloud::createShape(snow_shapes, 7000, Vector2f(0));
+	snow = PointCloud::createShape(snow_shapes, 1000, Vector2f(0));
 	//If there are no shapes, we can't do a simulation
 	if (snow == NULL) return;
 	point_size = 5;

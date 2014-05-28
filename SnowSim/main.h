@@ -9,11 +9,13 @@
 #include <time.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <math.h>
 #include "Particle.h"
 #include "PointCloud.h"
 #include "Grid.h"
 #include "SimConstants.h"
 #include "freeimage/FreeImage.h"
+#include "Shape.h"
 
 #define WIN_SIZE 640
 #define WIN_METERS 1.5

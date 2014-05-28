@@ -96,16 +96,26 @@ public:
 				else points = particles-total_points;
 				total_points += points;
 				
-				//Randomly scatter points in the shape until the quota is met
+				//Estimate the centroid of the shape with the bounds
 				snow_shapes[i]->bounds(bounds);
+				float cx = (bounds[0]+bounds[1])/2.0,
+					cy = (bounds[2]+bounds[3])/2.0,
+					cw = bounds[1] - cx,
+					ch = bounds[3] - cy;
+				
+				//Randomly scatter points in the shape until the quota is met
 				int points_found = 0;
 				while (points_found != points){
-					float tx = random_number(bounds[0], bounds[1]);
-					float ty = random_number(bounds[2], bounds[3]);
+					float tx = random_number(bounds[0], bounds[1]),
+						ty = random_number(bounds[2], bounds[3]);
 					//Check if this point is inside the shape
 					if (snow_shapes[i]->contains(tx, ty)){
+						//Randomly adjust hardness of snow
+						float adjust = (rand()/(float) RAND_MAX)*70;
+						//Make snow hardest on the outer edges
+						adjust *= ((fabs(tx-cx)/cw) + (fabs(ty-cy)/ch))/2.0;
 						obj->particles.push_back(Particle(
-							Vector2f(tx, ty), Vector2f(velocity), mass, lambda, mu
+							Vector2f(tx, ty), Vector2f(velocity), mass, lambda*adjust, mu*adjust
 						));
 						points_found++;
 					}
