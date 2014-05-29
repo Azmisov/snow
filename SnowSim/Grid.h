@@ -9,6 +9,7 @@
 #include <stdio.h>
 
 const float BSPLINE_EPSILON = 1e-4;
+const float TWO_THIRDS = 2/3.0;
 
 //Grid node data
 typedef struct GridNode{
@@ -53,34 +54,32 @@ public:
 	//Map grid velocities back to particles
 	void updateVelocities() const;
 	
+	//Collision detection
+	void collision();
+	
 	//Cubic B-spline shape/basis/interpolation function
 	//A smooth curve from (0,1) to (1,0)
 	static float bspline(float x){
 		x = fabs(x);
 		float w;
 		if (x < 1)
-			w = x*x*(x/2 - 1) + 2/3.0;
+			w = x*x*(x/2 - 1) + TWO_THIRDS;
 		else if (x < 2)
-			w = x*(x*(-x/6 + 1) - 2) + 4/3.0;
+			w = x*(x*(-x/6 + 1) - 2) + 2*TWO_THIRDS;
 		else return 0;
-		//Clamp between 0 and 1
+		//Clamp between 0 and 1... if needed
 		if (w < BSPLINE_EPSILON) return 0;
-		if (w > 1) return 1;
 		return w;
 	}
 	//Slope of interpolation function
 	static float bsplineSlope(float x){
-		bool neg = x < 0;
-		x = fabs(x);
-		float w;
-		if (x < 1)
-			w = x*(3/2.0*x - 2);
+		float abs_x = fabs(x), w;
+		if (abs_x < 1)
+			return 1.5*x*abs_x - 2*x;
 		else if (x < 2)
-			w = x*(2 - x/2) - 2;
+			return -x*abs_x/2 + 2*x - 2*x/abs_x;
 		else return 0;
-		//Clamp between -2/3 and 0
-		if (w > 0) return 0;
-		return neg ? -w : w;
+		//Clamp between -2/3 and 2/3... if needed
 	}
 };
 

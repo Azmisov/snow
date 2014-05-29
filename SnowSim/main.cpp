@@ -236,7 +236,7 @@ void start_simulation(){
 	//*/
 	
 	//* SHAPE SNOW
-	snow = PointCloud::createShape(snow_shapes, 1000, Vector2f(0));
+	snow = PointCloud::createShape(snow_shapes, 7000, Vector2f(0));
 	//If there are no shapes, we can't do a simulation
 	if (snow == NULL) return;
 	point_size = 5;

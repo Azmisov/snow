@@ -8,7 +8,7 @@ Grid::Grid(Vector2f pos, Vector2f dims, Vector2f cells, PointCloud* object){
 	nodes_length = size.product();
 	nodes = new GridNode[nodes_length];
 	//TODO: this is underestimating? perhaps we can scale by 1.435
-	node_volume = cellsize.product()*.75;
+	node_volume = cellsize.product();
 }
 Grid::Grid(const Grid& orig){}
 Grid::~Grid(){
@@ -70,11 +70,13 @@ void Grid::initializeVelocities(){
 				if (w > BSPLINE_EPSILON){
 					//Interpolate velocity
 					int n = (int) (y*size[0]+x);
+					//We could also do a separate loop to divide by nodes[n].mass only once
 					nodes[n].velocity += p.velocity * w * (p.mass/nodes[n].mass);
 				}
 			}
 		}
 	}
+	collision();
 }
 //Maps volume from the grid to particles
 //This should only be called once, at the beginning of the simulation
@@ -122,6 +124,18 @@ void Grid::explicitVelocities(const Vector2f& gravity){
 	}
 	
 	//Now we have all grid forces, compute velocities (euler integration)
+	for (int i=0; i<nodes_length; i++){
+		GridNode &node = nodes[i];
+		//Check to see if this node needs to be computed
+		if (node.has_velocity){
+			node.velocity_new = node.velocity + TIMESTEP*(node.force/node.mass + gravity);
+			//Force is used by implicit calculator, so we should reset it
+			node.force.setData(0);
+		}
+	}
+	collision();
+}
+void Grid::collision(){
 	Vector2f delta_scale = Vector2f(TIMESTEP);
 	delta_scale /= cellsize;
 	for (int y=0, idx=0; y<size[1]; y++){
@@ -130,10 +144,6 @@ void Grid::explicitVelocities(const Vector2f& gravity){
 			GridNode &node = nodes[idx];
 			//Check to see if this node needs to be computed
 			if (node.has_velocity){
-				node.velocity_new = node.velocity + TIMESTEP*(node.force/node.mass + gravity);
-				//Force is used by implicit calculator, so we should reset it
-				node.force.setData(0);
-
 				//Collision response
 				//TODO: make this work for arbitrary collision geometry
 				const int border_layers = 4;
