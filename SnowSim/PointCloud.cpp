@@ -22,10 +22,20 @@ void PointCloud::translate(Vector2f off){
 	}
 }
 void PointCloud::update(){
+	max_velocity = 0;
 	for (int i=0; i<size; i++){
 		particles[i].updatePos();
 		particles[i].updateGradient();
+		//Update max velocity, if needed
+		float vel = particles[i].velocity.length_squared();
+		if (vel > max_velocity)
+			max_velocity = vel;
 	}
+}
+void PointCloud::merge(const PointCloud& other){
+	size += other.size;
+	particles.reserve(size);
+	particles.insert(particles.end(), other.particles.begin(), other.particles.end());
 }
 void PointCloud::bounds(float bounds[4]){
 	bounds[0] = particles[0].position[0]; bounds[1] = bounds[0];

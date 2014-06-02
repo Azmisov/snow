@@ -20,7 +20,7 @@ int point_size;
 PointCloud* snow;
 Grid* grid;
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv){
 	srand(time(NULL));
 	
 	//Create GLFW window
@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
 	//Drawing & event loop
 	//Create directory to save buffers in
 #if SCREENCAST
-	mkdir("../screencast/",0777);
+	mkdir(SCREENCAST_DIR,0777);
 	FreeImage_Initialise();
 	img_buffer = new unsigned char[bsize];
 #endif
@@ -172,14 +172,89 @@ void remove_all_shapes(){
 	snow_shapes.clear();
 }
 
+//Simulation
+//float TIMESTEP;
+void start_simulation(){	
+	//Convert drawn shapes to snow particles
+	snow = PointCloud::createShape(snow_shapes, Vector2f(2.5, 0));
+	//If there are no shapes, we can't do a simulation
+	if (snow == NULL) return;
+	point_size = 6;
+	
+	//Computational grid
+	grid = new Grid(Vector2f(0), Vector2f(WIN_METERS, WIN_METERS), Vector2f(64), snow);
+	//We need to estimate particle volumes before we start
+	grid->initializeMass();	
+	grid->calculateVolumes();
+	
+	pthread_t sim_thread;
+	pthread_create(&sim_thread, NULL, simulate, NULL);
+}
+void *simulate(void *args){
+	simulating = true;
+	struct timespec delay;
+	delay.tv_sec = 0;
+	clock_t start = clock(), end;
+	cout << "Starting simulation..." << endl;
+	Vector2f gravity = Vector2f(0, -9.8);
+	
+	float cum_sum = 0;
+	int iter = 0;
+	while (simulating && ++iter > 0){
+		//TIMESTEP = adaptive_timestep();
+		cum_sum += TIMESTEP;
+		//Initialize FEM grid
+		grid->initializeMass();
+		grid->initializeVelocities();
+		//Compute grid velocities
+		grid->explicitVelocities(gravity);
+		if (IMPLICIT_RATIO > 0)
+			grid->implicitVelocities();
+		//Map back to particles
+		grid->updateVelocities();
+		//Update particle data
+		snow->update();
+		//Redraw snow
+		if (!LIMIT_FPS || cum_sum >= FRAMERATE){
+			dirty_buffer = true;
+			cum_sum -= FRAMERATE;
+		}
+		//Realtime visualization (approximate)
+		clock_t end_new = clock()+15;
+		float diff = (end_new-end)/(float) CLOCKS_PER_SEC;
+		end = end_new;
+		if (diff < TIMESTEP){
+			delay.tv_nsec = 1/(TIMESTEP-diff);
+			nanosleep(&delay, NULL);
+		}
+		//Slow motion playback
+		delay.tv_nsec = SLO_MO;
+		nanosleep(&delay, NULL);
+	}
+
+	cout << "Simulation complete: " << (clock()-start)/(float) CLOCKS_PER_SEC << " seconds\n" << endl;
+	simulating = false;
+	pthread_exit(NULL);
+}
+float adaptive_timestep(){
+	float max_vel = snow->max_velocity;
+	if (max_vel > 1e-8){
+		//TODO: this assumes cellsize[0] == cellsize[1]
+		//We should really take the min(cellsize)
+		float dt = 0.01 / sqrt(max_vel) / grid->cellsize[0];
+		return dt > FRAMERATE ? FRAMERATE : dt;
+	}
+	return FRAMERATE;
+}
+
 void redraw(){
-	glClearColor(1, 1, 1, 1);
+	glClearColor(0, 0, 0, 1);
 	glClear(GL_COLOR_BUFFER_BIT);
 	
 	if (simulating){
 		//Grid nodes
 		glPointSize(1);
-		glColor3f(1, 0, 0);
+		glColor3f(0, .7, 1);
 		glBegin(GL_POINTS);
 		for (int i=0; i<grid->size[0]; i++){
 			for (int j=0; j<grid->size[1]; j++)
@@ -195,9 +270,9 @@ void redraw(){
 		for (int i=0; i<snow->size; i++){
 			Particle& p = snow->particles[i];
 			//We can use the particle's density to vary color
-			//Max density set to 160+DENSITY
-			float density = 1 - p.density/DENSITY;
-			glColor3f(0, density < 0 ? 0 : density, 1);
+			float density = p.density/DENSITY*.18;
+			density += .82;
+			glColor3f(density, density, density);
 			glVertex2fv(p.position.data);
 		}
 		glEnd();
@@ -216,87 +291,13 @@ void redraw(){
 			snow_shapes[i]->draw();
 	}
 }
-
-void start_simulation(){
-	/* SQUARE SNOW
-	//meters in each dimension
-	const float mpdim = .25;
-	//particle count for each dimension
-	const int ppdim = 60;
-	snow = PointCloud::createSquare(mpdim, ppdim, Vector2f(0));
-	snow->translate(Vector2f(.75-mpdim/2*(ppdim != 1), 1));
-	//Adjust visualization size to fill area
-	point_size = WIN_SIZE/WIN_METERS*mpdim/ppdim+3;
-	if (point_size < 1)
-		point_size = 1;
-	else if (point_size > 20)
-		point_size = 20;
-	if (!SUPPORTS_POINT_SMOOTH)
-		point_size += 2;
-	//*/
-	
-	//* SHAPE SNOW
-	snow = PointCloud::createShape(snow_shapes, 7000, Vector2f(0));
-	//If there are no shapes, we can't do a simulation
-	if (snow == NULL) return;
-	point_size = 5;
-	//*/
-	
-	grid = new Grid(Vector2f(0), Vector2f(WIN_METERS, WIN_METERS), Vector2f(100), snow);
-	//We need to estimate particle volumes before we start
-	grid->initializeMass();	
-	grid->calculateVolumes();
-	
-	pthread_t sim_thread;
-	pthread_create(&sim_thread, NULL, simulate, NULL);
-}
-void *simulate(void *args){
-	simulating = true;
-	clock_t start = clock();
-	cout << "Starting simulation..." << endl;
-	Vector2f gravity = Vector2f(0, -9.8);
-
-#if REALTIME_PLAYBACK
-	struct timespec sleep_duration;
-	sleep_duration.tv_sec = 0;
-	sleep_duration.tv_nsec = TIMESTEP*1e9;
-#endif
-	
-	int iter = 0, redraw_every = REDRAW_EVERY;
-	while (simulating && ++iter > 0){
-	//for (int i=0; i<550; i++){
-		//Initialize FEM grid
-		grid->initializeMass();
-		grid->initializeVelocities();
-		//Compute grid velocities
-		grid->explicitVelocities(gravity);
-		if (IMPLICIT_RATIO > 0)
-			grid->implicitVelocities();
-		//Map back to particles
-		grid->updateVelocities();
-		//Update particle data
-		snow->update();
-		//Redraw snow
-		if (iter % redraw_every == 0)
-			dirty_buffer = true;
-#if REALTIME_PLAYBACK
-		//Delay... (if doing realtime visualization)
-		nanosleep(&sleep_duration, NULL);
-#endif
-	}
-
-	cout << "Simulation complete: " << (clock()-start)/(float) CLOCKS_PER_SEC << " seconds\n" << endl;
-	simulating = false;
-	pthread_exit(NULL);
-}
-
 #if SCREENCAST
 void save_buffer(int time){
 	FILE *file;
 	char fname[32];
 	
 	glPixelStorei(GL_PACK_ALIGNMENT, 1);
-	sprintf(fname, "../screencast/t_%04d.png", time);
+	sprintf(fname, "%st_%04d.png", SCREENCAST_DIR, time);
 	printf("%s\n", fname);
 	
 	//Copy the image to buffer

@@ -1,7 +1,6 @@
 #include "Vector2f.h"
 #include <cmath>
 #include <stdio.h>
-#include "float.h"
 
 //CONSTRUCTORS
 Vector2f::Vector2f(){
@@ -43,10 +42,13 @@ const float Vector2f::product() const{
 	return data[0] * data[1];
 }
 const float Vector2f::length() const{
+	return sqrt(length_squared());
+}
+const float Vector2f::length_squared() const{
 	double sum = 0;
 	for (int i=0; i<2; i++)
 		sum += data[i]*data[i];
-	return sqrt(sum);
+	return sum;
 }
 const Matrix2f Vector2f::dyadic_product(const Vector2f& v) const{
 	return Matrix2f(

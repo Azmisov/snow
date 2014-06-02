@@ -2,9 +2,9 @@
 #define	PARTICLE_H
 
 #include <cmath>
-#include "SimConstants.h"
 #include "Vector2f.h"
 #include "Matrix2f.h"
+#include "SimConstants.h"
 
 class Particle {
 public:

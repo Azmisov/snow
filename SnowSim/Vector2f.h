@@ -27,6 +27,7 @@ public:
 	const float sum() const;
 	const float product() const;
 	const float length() const;
+	const float length_squared() const;
 	//Vector * Vector^T
 	const Matrix2f dyadic_product(const Vector2f& v) const;
 	

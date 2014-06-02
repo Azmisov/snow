@@ -7,8 +7,7 @@ Grid::Grid(Vector2f pos, Vector2f dims, Vector2f cells, PointCloud* object){
 	size = cells+1;
 	nodes_length = size.product();
 	nodes = new GridNode[nodes_length];
-	//TODO: this is underestimating? perhaps we can scale by 1.435
-	node_volume = cellsize.product();
+	node_area = cellsize.product();
 }
 Grid::Grid(const Grid& orig){}
 Grid::~Grid(){
@@ -76,7 +75,7 @@ void Grid::initializeVelocities(){
 			}
 		}
 	}
-	collision();
+	collisionGrid();
 }
 //Maps volume from the grid to particles
 //This should only be called once, at the beginning of the simulation
@@ -97,7 +96,7 @@ void Grid::calculateVolumes() const{
 				}
 			}
 		}
-		p.density /= node_volume;
+		p.density /= node_area;
 		//Volume for each particle can be found from density
 		p.volume = p.mass / p.density;
 	}
@@ -128,35 +127,12 @@ void Grid::explicitVelocities(const Vector2f& gravity){
 		GridNode &node = nodes[i];
 		//Check to see if this node needs to be computed
 		if (node.has_velocity){
-			node.velocity_new = node.velocity + TIMESTEP*(node.force/node.mass + gravity);
+			node.velocity_new = node.velocity + TIMESTEP*(gravity - node.force/node.mass);
 			//Force is used by implicit calculator, so we should reset it
 			node.force.setData(0);
 		}
 	}
-	collision();
-}
-void Grid::collision(){
-	Vector2f delta_scale = Vector2f(TIMESTEP);
-	delta_scale /= cellsize;
-	for (int y=0, idx=0; y<size[1]; y++){
-		for (int x=0; x<size[0]; x++, idx++){
-			//Get grid node (equivalent to (y*size[0] + x))
-			GridNode &node = nodes[idx];
-			//Check to see if this node needs to be computed
-			if (node.has_velocity){
-				//Collision response
-				//TODO: make this work for arbitrary collision geometry
-				const int border_layers = 4;
-				Vector2f new_pos = node.velocity_new*delta_scale + Vector2f(x, y);
-				//Left border, right border
-				if (new_pos[0] < border_layers-1 || new_pos[0] > size[0]-border_layers)
-					node.velocity_new[0] = 0;//-node.velocity_new[0];
-				//Bottom border
-				if (new_pos[1] < border_layers-1 || new_pos[1] > size[1]-border_layers)
-					node.velocity_new[1] = 0;//-node.velocity_new[1];
-			}
-		}
-	}
+	collisionGrid();
 }
 //Solve linear system for implicit velocities
 void Grid::implicitVelocities(){
@@ -308,6 +284,58 @@ void Grid::updateVelocities() const{
 		//Final velocity is a linear combination of PIC and FLIP components
 		p.velocity = flip*FLIP_PERCENT + pic*(1-FLIP_PERCENT);
 		//VISUALIZATION: Update density
-		p.density /= node_volume;
+		p.density /= node_area;
+	}
+	collisionParticles();
+}
+
+const int border_layers = 2;
+const float cor = 0;
+void Grid::collisionGrid(){
+	Vector2f delta_scale = Vector2f(TIMESTEP);
+	delta_scale /= cellsize;
+	for (int y=0, idx=0; y<size[1]; y++){
+		for (int x=0; x<size[0]; x++, idx++){
+			//Get grid node (equivalent to (y*size[0] + x))
+			GridNode &node = nodes[idx];
+			//Check to see if this node needs to be computed
+			if (node.has_velocity){
+				//Collision response
+				//TODO: make this work for arbitrary collision geometry
+				Vector2f new_pos = node.velocity_new*delta_scale + Vector2f(x, y);
+				//Left border, right border
+				/*
+				if (new_pos[0] < border_layers-1 || new_pos[0] > size[0]-border_layers)
+					node.velocity_new[0] = -cor*node.velocity_new[0];
+				//Bottom border
+				if (new_pos[1] < border_layers-1 || new_pos[1] > size[1]-border_layers)
+					node.velocity_new[1] = -cor*node.velocity_new[1];
+				*/
+				//Sticky collisions
+				if (new_pos[0] < border_layers-1 || new_pos[0] > size[0]-border_layers ||
+					new_pos[1] < border_layers-1 || new_pos[1] > size[1]-border_layers){
+					node.velocity_new.setData(0);
+				}
+			}
+		}
+	}
+}
+void Grid::collisionParticles() const{
+	for (int i=0; i<obj->size; i++){
+		Particle& p = obj->particles[i];
+		Vector2f new_pos = p.grid_position + TIMESTEP*p.velocity/cellsize;
+		/*
+		//Left border, right border
+		if (new_pos[0] < border_layers-1 || new_pos[0] > size[0]-border_layers)
+			p.velocity[0] = -cor*p.velocity[0];
+		//Bottom border
+		if (new_pos[1] < border_layers-1 || new_pos[1] > size[1]-border_layers)
+			p.velocity[1] = -cor*p.velocity[1];
+		*/
+		//Sticky collisions
+		if (new_pos[0] < border_layers-1 || new_pos[0] > size[0]-border_layers ||
+			new_pos[1] < border_layers-1 || new_pos[1] > size[1]-border_layers){
+			p.velocity.setData(0);
+		}
 	}
 }

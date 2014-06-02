@@ -85,7 +85,7 @@ const Matrix2f Particle::cauchyStress(){
 	temp *= 2*mu;
 	Matrix2f temp2 = temp*def_elastic.transpose();
 	temp2.diag_sum(lambda*det_elastic*(det_elastic-1));
-	return -volume * temp2;
+	return volume * temp2;
 }
 const Vector2f Particle::deltaForce(const Vector2f& u, const Vector2f& weight_grad){
 	//For detailed explanation, check out the implicit math pdf for details
@@ -145,5 +145,5 @@ const Vector2f Particle::deltaForce(const Vector2f& u, const Vector2f& weight_gr
 	
 	//Put it all together
 	//Parentheses are important; M*M*V is slower than M*(M*V)
-	return -volume*(Ap*(def_elastic.transpose()*weight_grad));
+	return volume*(Ap*(def_elastic.transpose()*weight_grad));
 }

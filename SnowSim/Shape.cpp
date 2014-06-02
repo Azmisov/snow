@@ -53,12 +53,12 @@ void Shape::bounds(float bounds[4]){
 }
 
 void Shape::draw(){
-	glColor3f(0, .5, 1);
+	glColor3f(1, 1, 1);
 	glBegin(GL_POLYGON);
 	for (int i=0, l=vertices.size(); i<l; i++)
 		glVertex2fv(vertices[i].data);
 	glEnd();
-	glColor3f(0, 0, 0);
+	glColor3f(0, .3, 1);
 	glPointSize(5);
 	glBegin(GL_POINTS);
 	for (int i=0, l=vertices.size(); i<l; i++)

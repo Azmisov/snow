@@ -1,12 +1,12 @@
 #ifndef GRID_H
 #define	GRID_H
 
-#include "PointCloud.h"
-#include "Vector2f.h"
-#include "SimConstants.h"
 #include <math.h>
 #include <cstring>
 #include <stdio.h>
+#include "PointCloud.h"
+#include "Vector2f.h"
+#include "SimConstants.h"
 
 const float BSPLINE_EPSILON = 1e-4;
 const float TWO_THIRDS = 2/3.0;
@@ -32,7 +32,7 @@ class Grid {
 public:
 	Vector2f origin, size, cellsize;
 	PointCloud* obj;	
-	float node_volume;
+	float node_area;
 	//Nodes: use (y*size[0] + x) to index, where zero is the bottom-left corner (e.g. like a cartesian grid)
 	int nodes_length;
 	GridNode* nodes;
@@ -55,7 +55,8 @@ public:
 	void updateVelocities() const;
 	
 	//Collision detection
-	void collision();
+	void collisionGrid();
+	void collisionParticles() const;
 	
 	//Cubic B-spline shape/basis/interpolation function
 	//A smooth curve from (0,1) to (1,0)

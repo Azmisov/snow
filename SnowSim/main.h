@@ -2,6 +2,7 @@
 #define	MAIN_H
 
 #include "glfw3/glfw3.h"
+#include "freeimage/FreeImage.h"
 #include <iostream>
 #include <stdlib.h>
 #include <stdio.h>
@@ -14,11 +15,7 @@
 #include "PointCloud.h"
 #include "Grid.h"
 #include "SimConstants.h"
-#include "freeimage/FreeImage.h"
 #include "Shape.h"
-
-#define WIN_SIZE 640
-#define WIN_METERS 1.5
 
 static void error_callback(int, const char*);
 void key_callback(GLFWwindow*, int, int, int, int);
@@ -26,6 +23,7 @@ void mouse_callback(GLFWwindow*, int, int, int);
 void redraw();
 void start_simulation();
 void *simulate(void *args);
+float adaptive_timestep();
 void save_buffer(int time);
 
 //Shape stuff
