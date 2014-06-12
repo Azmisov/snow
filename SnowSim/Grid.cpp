@@ -106,7 +106,7 @@ void Grid::explicitVelocities(const Vector2f& gravity){
 	for (int i=0; i<obj->size; i++){
 		Particle& p = obj->particles[i];
 		//Solve for grid internal forces
-		Matrix2f force = p.cauchyStress();
+		Matrix2f energy = p.energyDerivative();
 		int ox = p.grid_position[0],
 			oy = p.grid_position[1];
 		for (int idx=0, y=oy-1, y_end=oy+2; y<=y_end; y++){
@@ -115,7 +115,7 @@ void Grid::explicitVelocities(const Vector2f& gravity){
 				if (w > BSPLINE_EPSILON){
 					//Weight the force onto nodes
 					int n = (int) (y*size[0]+x);
-					nodes[n].force += force*p.weight_gradient[idx];
+					nodes[n].force += energy*p.weight_gradient[idx];
 					nodes[n].has_velocity = true;
 				}
 			}

@@ -26,6 +26,7 @@ void PointCloud::update(){
 	for (int i=0; i<size; i++){
 		particles[i].updatePos();
 		particles[i].updateGradient();
+		particles[i].applyPlasticity();
 		//Update max velocity, if needed
 		float vel = particles[i].velocity.length_squared();
 		if (vel > max_velocity)

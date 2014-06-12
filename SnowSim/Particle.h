@@ -35,8 +35,9 @@ public:
 	void updatePos();
 	//Update deformation gradient
 	void updateGradient();
+	void applyPlasticity();
 	//Compute stress tensor
-	const Matrix2f cauchyStress();
+	const Matrix2f energyDerivative();
 	
 	//Computes stress force delta, for implicit velocity update
 	const Vector2f deltaForce(const Vector2f& u, const Vector2f& weight_grad);

@@ -30,8 +30,9 @@ void Particle::updateGradient(){
 	velocity_gradient *= TIMESTEP;
 	velocity_gradient.diag_sum(1);
 	def_elastic.setData(velocity_gradient * def_elastic);
+}
+void Particle::applyPlasticity(){
 	Matrix2f f_all = def_elastic * def_plastic;
-	
 	//We compute the SVD decomposition
 	//The singular values (basically a scale transform) tell us if 
 	//the particle has exceeded critical stretch/compression
@@ -65,7 +66,7 @@ void Particle::updateGradient(){
 	mu = mu_s*scale;
 	lambda = lambda_s*scale;
 }
-const Matrix2f Particle::cauchyStress(){
+const Matrix2f Particle::energyDerivative(){
 	/* Stress force on each particle is: -volume*cauchy_stress
 		We transfer the force to the FEM grid using the shape function gradient
 		cauchy_stress can be computed via: (2u(Fe - Re)*Fe^T + y(Je - 1)Je*I)/J
