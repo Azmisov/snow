@@ -26,14 +26,18 @@ SIM_GridInterpolate::~SIM_GridInterpolate(){}
 //Gets node description data
 const SIM_DopDescription* SIM_GridInterpolate::getDescription(){
 	//Register input parameters
+	static PRM_Name p_field("particles", "Particles");
+	static PRM_Name i_field("inputAttr", "Attribute");
+	static PRM_Name o_field("outputAttr", "Destination Field");
+
 	static PRM_Template theTemplates[] = {
-		PRM_Template(PRM_STRING, 1, &PRM_Name("particles", "Particles")),
-		PRM_Template(PRM_STRING, 1, &PRM_Name("inputAttr", "Attribute")),
-		PRM_Template(PRM_STRING, 1, &PRM_Name("outputAttr", "Destination Field")),
+		PRM_Template(PRM_STRING, 1, &p_field),
+		PRM_Template(PRM_STRING, 1, &i_field),
+		PRM_Template(PRM_STRING, 1, &o_field),
 		PRM_Template()
 	};
 
-	return &SIM_DopDescription(
+	static SIM_DopDescription desc(
 		true,					// true, to make this node a DOP
 		"hdk_gridinterpolate",	// internal name
 		"Grid Interpolate",		// node label
@@ -41,6 +45,7 @@ const SIM_DopDescription* SIM_GridInterpolate::getDescription(){
 		classname(),			// type of this dop
 		theTemplates			// input parameters
 	);
+	return &desc;
 }
 
 //Do the interpolation calculations
