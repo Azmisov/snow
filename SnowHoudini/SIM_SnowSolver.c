@@ -8,6 +8,7 @@
 #include <SIM/SIM_VectorField.h>
 #include <SIM/SIM_MatrixField.h>
 #include <SIM/SIM_Object.h>
+#include <SIM/SIM_GeometryCopy.h>
 #include <GAS/GAS_SubSolver.h>
 
 #include <iostream>
@@ -92,13 +93,146 @@ const SIM_DopDescription* SIM_SnowSolver::getDescription(){
 //Do the interpolation calculations
 bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_Time time, SIM_Time timestep){
 	/// STEP #0: Retrieve all data objects from Houdini
-	//TODO: should we reset grid here, or in a separate node?
-	//		we're resizing the grid separately, so we could just do the reset after that...
+
+	SIM_GeometryCopy* geometry = (SIM_GeometryCopy*)obj->getNamedSubData("particles");
+	if (!geometry)
+	{
+		return true;
+	}
+	
+	//Get particle data
+	//Do we use the attribute name???
+	GU_DetailHandle gdh = geometry->getGeometry().getWriteableCopy();
+	const GU_Detail* gdp_in = gdh.readLock(); // Must unlock later
+	GU_Detail* gdp_out = gdh.writeLock();
+
+	GA_ROAttributeRef p_ref_position = gdp_in->findPointAttribute("P");
+	GA_ROHandleT<UT_Vector3> p_position(p_ref_position.getAttribute());
+
+	GA_ROAttributeRef p_ref_mass = gdp_in->findPointAttribute("mass");
+	GA_ROHandleT<float> p_mass(p_ref_mass.getAttribute());
+
+	GA_ROAttributeRef p_ref_volume = gdp_in->findPointAttribute("vol");
+	GA_ROHandleT<float> p_volume(p_ref_volume.getAttribute());
+
+	GA_ROAttributeRef p_ref_density = gdp_in->findPointAttribute("density");
+	GA_ROHandleT<float> p_density(p_ref_density.getAttribute());
+
+	GA_ROAttributeRef p_ref_vel = gdp_in->findPointAttribute("vel");
+	GA_ROHandleT<UT_Vector3> p_vel(p_ref_vel.getAttribute());
+
+	GA_ROAttributeRef p_ref_Fe = gdp_in->findPointAttribute("Fe");
+	GA_ROHandleT<UT_Matrix3> p_Fe(p_ref_Fe.getAttribute());
+
+	GA_ROAttributeRef p_ref_Fp = gdp_in->findPointAttribute("Fp");
+	GA_ROHandleT<UT_Matrix3> p_Fp(p_ref_Fp.getAttribute());
+
+	
+	//Get grid data
+	SIM_ScalarField *g_mass_field;
+	SIM_DataArray g_mass_data;
+	getMatchingData(g_mass_data, obj, "g_mass");	
+	g_mass_field = SIM_DATA_CAST(g_mass_data[0], SIM_ScalarField);
+
+	SIM_VectorField *g_force_field;
+	SIM_DataArray g_force_data;
+	getMatchingData(g_force_data, obj, "g_force");	
+	g_force_field = SIM_DATA_CAST(g_force_data[0], SIM_VectorField);
+
+	SIM_VectorField *g_nvel_field;
+	SIM_DataArray g_nvel_data;
+	getMatchingData(g_nvel_data, obj, "g_nvel");
+	g_nvel_field = SIM_DATA_CAST(g_nvel_data[0], SIM_VectorField);
+
+	SIM_VectorField *g_ovel_field;
+	SIM_DataArray g_ovel_data;
+	getMatchingData(g_ovel_data, obj, "g_ovel");
+	g_ovel_field = SIM_DATA_CAST(g_ovel_data[0], SIM_VectorField);
+
+	SIM_ScalarField *g_active_field;
+	SIM_DataArray g_active_data;
+	getMatchingData(g_active_data, obj, "g_active");	
+	g_active_field = SIM_DATA_CAST(g_active_data[0], SIM_ScalarField);
+
+	UT_VoxelArrayF* g_mass = g_mass_field->getField()->fieldNC();
+
+	UT_VoxelArrayF* g_forceX = g_force_field->getField(0)->fieldNC();
+	UT_VoxelArrayF* g_forceY = g_force_field->getField(1)->fieldNC();
+	UT_VoxelArrayF* g_forceZ = g_force_field->getField(2)->fieldNC();
+
+	UT_VoxelArrayF* g_nvelX = g_nvel_field->getField(0)->fieldNC();
+	UT_VoxelArrayF* g_nvelY = g_nvel_field->getField(1)->fieldNC();
+	UT_VoxelArrayF* g_nvelZ = g_nvel_field->getField(2)->fieldNC();
+
+	UT_VoxelArrayF* g_ovelX = g_nvel_field->getField(0)->fieldNC();
+	UT_VoxelArrayF* g_ovelY = g_nvel_field->getField(1)->fieldNC();
+	UT_VoxelArrayF* g_ovelZ = g_nvel_field->getField(2)->fieldNC();
+
+	UT_VoxelArrayF* g_active = g_active_field->getField()->fieldNC();
 	
 
-	/// STEP #1: Transfer mass to grid
+	//TODO: should we reset grid here, or in a separate node?
+	//		we're resizing the grid separately, so we could just do the reset after that...
+
+	/// STEP #1: Transfer mass to grid 
 	
+	if (p_position.isValid())
+	{	
+		int num = 0;
+		for (GA_Iterator it(gdp_in->getPointRange()); !it.atEnd(); it.advance()) //Iterate through particles
+		{
+			const UT_Vector3 pos(p_position.get(it.getOffset())); //Particle position pos
+
+			int p_gridx = 0;
+			int p_gridy = 0;
+			int p_gridz = 0;
+			g_nvel_field->posToIndex(0,pos,p_gridx,p_gridy,p_gridz); //Get grid position
+			
+			for (int idx=0, z=p_gridz-1, z_end=p_gridz+2; z<=z_end; z++){
+				//Z-dimension interpolation
+				float z_pos = z-p_gridz,
+					wz = SIM_SnowSolver::bspline(z_pos),
+					dz = SIM_SnowSolver::bsplineSlope(z_pos);
+
+				for (int y=p_gridy-1, y_end=p_gridy+2; y<=y_end; y++){
+					//Y-dimension interpolation
+					float y_pos = y-p_gridy,
+						wy = SIM_SnowSolver::bspline(y_pos),
+						dy = SIM_SnowSolver::bsplineSlope(y_pos);
+
+						for (int x=p_gridx-1, x_end=p_gridx+2; x<=x_end; x++, idx++){
+							//X-dimension interpolation
+							float x_pos = x-p_gridx,
+								wx = SIM_SnowSolver::bspline(x_pos),
+								dx = SIM_SnowSolver::bsplineSlope(x_pos);
+							
+							//Final weight is dyadic product of weights in each dimension
+							float weight = wx*wy;
+							/////////////////////////////////////////Weights storage?!?!?
+							//p.weights[idx] = weight;
+
+							//Weight gradient is a vector of partial derivatives
+							/////////////////////////////////////////Weight gradient storage?!?!?
+							//p.weight_gradient[idx].setData(dx*wy, wx*dy);
+
+							//Interpolate mass
+						    float node_mass = g_mass->getValue(x,y,z);
+
+							float particle_mass(p_mass.get(it.getOffset()));
+							node_mass += weight*particle_mass; 
+							g_mass->setValue(x,y,z,node_mass);
+						}
+				}
+			}
+			
+		}
+	}
+
 	/// STEP #2: First timestep only - Estimate particle volumes using grid mass
+
+	if(time == 0){
+		
+	}
 	
 	/// STEP #3: Transfer velocity to grid
 	
@@ -111,6 +245,9 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 	/// STEP #7: Update particle deformation gradient
 	
 	/// STEP #8: Particle collision resolution
+
+	gdh.unlock(gdp_out);
+    gdh.unlock(gdp_in);
 	
 	return true;
 }
