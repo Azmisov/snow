@@ -3,13 +3,19 @@
 
 #include <GAS/GAS_SubSolver.h>
 #include <GAS/GAS_Utils.h>
+
+#define INPUT_PARTICLES_NAME "particles"
+#define INPUT_ATTR_NAME "inputAttr"
+#define OUTPUT_ATTR_NAME "ouputAttr"
+#define GRID_FIELD_NAME "gridField"
  
 class SIM_GridInterpolate : public GAS_SubSolver{
 public:
 	//These create setter/getter functions to access input params
-	GET_DATA_FUNC_S("particles", InputParticles);
-	GET_DATA_FUNC_S("inputAttr", InputAttr);
-	GET_DATA_FUNC_S("ouputAttr", OutputAttr);
+	GET_DATA_FUNC_S(INPUT_PARTICLES_NAME, InputParticles);
+	GET_DATA_FUNC_S(INPUT_ATTR_NAME, InputAttr);
+	GET_DATA_FUNC_S(OUTPUT_ATTR_NAME, OutputAttr);
+	GET_DATA_FUNC_S(GRID_FIELD_NAME, GridField);
 
 protected:
 	//Constructor
