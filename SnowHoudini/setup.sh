@@ -10,3 +10,4 @@ popd
 #compile each houdini node
 hcustom SIM_CalculateVelocity.C
 hcustom SIM_GridInterpolate.c
+hcustom SIM_SnowSolver.c
