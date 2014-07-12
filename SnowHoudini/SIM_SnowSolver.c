@@ -1,4 +1,10 @@
 #include "SIM_SnowSolver.h"
+#include <GU/GU_DetailHandle.h>
+#include <GU/GU_Detail.h>
+#include <GA/GA_Handle.h>
+#include <GA/GA_AttributeRef.h>
+#include <GA/GA_Iterator.h>
+#include <GA/GA_Types.h>
 #include <UT/UT_DSOVersion.h>
 #include <UT/UT_Interrupt.h>
 #include <PRM/PRM_Include.h>
@@ -174,6 +180,26 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 	//TODO: should we reset grid here, or in a separate node?
 	//		we're resizing the grid separately, so we could just do the reset after that...
 
+	GA_RWHandleT<UT_Vector> p_wh(gdp_out->findPointAttribute("p_w"));
+	if (!p_wh.isValid())
+	{
+		GA_RWAttributeRef p_w;
+		// Don't create this attribute from the particles, it must be created here.
+		p_w = gdp_out->addFloatTuple(GA_ATTRIB_POINT, "p_w", 27, GA_Defaults(0.0));
+		// There is no type for array attributes, but apparently a type is not required.
+		// p_w.setTypeInfo(GA_TYPE_VECTOR);
+		p_wh = GA_RWHandleT<UT_Vector>(p_w);
+	}
+
+	// Not sure how to make this work yet
+	GA_RWHandleT<UT_VectorT<UT_Vector3> > p_wgh(gdp_out->findPointAttribute("p_wg"));
+	if(!p_wgh.isValid())
+	{
+		GA_RWAttributeRef p_wg;
+		p_wg = gdp_out->addFloatTuple(GA_ATTRIB_POINT, "p_wg", 27, GA_Defaults(0.0)); // UT_Vector3(0.0, 0.0, 0.0) doesn't work . . .
+		p_wgh = GA_RWHandleT<UT_VectorT<UT_Vector3> >(p_wg);
+	}
+
 	/// STEP #1: Transfer mass to grid 
 	
 	if (p_position.isValid())
@@ -187,7 +213,8 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 			int p_gridy = 0;
 			int p_gridz = 0;
 			g_nvel_field->posToIndex(0,pos,p_gridx,p_gridy,p_gridz); //Get grid position
-			
+			UT_Vector weights(0, 27);
+			UT_VectorT<UT_Vector3> weight_gradients(0, 27);
 			for (int idx=0, z=p_gridz-1, z_end=p_gridz+2; z<=z_end; z++){
 				//Z-dimension interpolation
 				float z_pos = z-p_gridz,
@@ -210,10 +237,14 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 							float weight = wx*wy;
 							/////////////////////////////////////////Weights storage?!?!?
 							//p.weights[idx] = weight;
+							weights.assign(&weight, idx, idx);
 
 							//Weight gradient is a vector of partial derivatives
 							/////////////////////////////////////////Weight gradient storage?!?!?
 							//p.weight_gradient[idx].setData(dx*wy, wx*dy);
+
+							//Doesn't compile . . .
+							//weight_gradients.assign(UT_Vector3(dx*wx, dy*wy, dz*wz), idx, idx);
 
 							//Interpolate mass
 						    float node_mass = g_mass->getValue(x,y,z);
@@ -224,13 +255,14 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 						}
 				}
 			}
-			
+			p_wh.set(it.getOffset(), weights);
+			p_wgh.set(it.getOffset(), weight_gradients);
 		}
 	}
 
 	/// STEP #2: First timestep only - Estimate particle volumes using grid mass
 
-	if(time == 0){
+	if(time == 0.0){
 		
 	}
 	
