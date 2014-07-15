@@ -121,8 +121,8 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 	GA_ROAttributeRef p_ref_volume = gdp_in->findPointAttribute("vol");
 	GA_ROHandleT<float> p_volume(p_ref_volume.getAttribute());
 
-	GA_ROAttributeRef p_ref_density = gdp_in->findPointAttribute("density");
-	GA_ROHandleT<float> p_density(p_ref_density.getAttribute());
+	GA_RWAttributeRef p_ref_density = gdp_out->findPointAttribute("density");
+	GA_RWHandleF p_density(p_ref_density.getAttribute());
 
 	GA_ROAttributeRef p_ref_vel = gdp_in->findPointAttribute("vel");
 	GA_ROHandleT<UT_Vector3> p_vel(p_ref_vel.getAttribute());
@@ -179,13 +179,13 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 
 	//TODO: should we reset grid here, or in a separate node?
 	//		we're resizing the grid separately, so we could just do the reset after that...
-
+	
 	GA_RWHandleT<UT_Vector> p_wh(gdp_out->findPointAttribute("p_w"));
 	if (!p_wh.isValid())
 	{
 		GA_RWAttributeRef p_w;
 		// Don't create this attribute from the particles, it must be created here.
-		p_w = gdp_out->addFloatTuple(GA_ATTRIB_POINT, "p_w", 27, GA_Defaults(0.0));
+		p_w = gdp_out->addFloatTuple(GA_ATTRIB_POINT, "p_w", 64, GA_Defaults(0.0));
 		// There is no type for array attributes, but apparently a type is not required.
 		// p_w.setTypeInfo(GA_TYPE_VECTOR);
 		p_wh = GA_RWHandleT<UT_Vector>(p_w);
@@ -196,25 +196,25 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 	if(!p_wgh.isValid())
 	{
 		GA_RWAttributeRef p_wg;
-		p_wg = gdp_out->addFloatTuple(GA_ATTRIB_POINT, "p_wg", 27, GA_Defaults(0.0)); // UT_Vector3(0.0, 0.0, 0.0) doesn't work . . .
+		p_wg = gdp_out->addFloatTuple(GA_ATTRIB_POINT, "p_wg", 64, GA_Defaults(0.0)); // UT_Vector3(0.0, 0.0, 0.0) doesn't work . . .
 		p_wgh = GA_RWHandleT<UT_VectorT<UT_Vector3> >(p_wg);
 	}
 
-	/// STEP #1: Transfer mass to grid 
-	
+	/// STEP #1: Transfer mass to grid 	
+
 	if (p_position.isValid())
 	{	
 		int num = 0;
-		for (GA_Iterator it(gdp_in->getPointRange()); !it.atEnd(); it.advance()) //Iterate through particles
+		for (GA_Iterator it(gdp_out->getPointRange()); !it.atEnd(); it.advance()) //Iterate through particles
 		{
 			const UT_Vector3 pos(p_position.get(it.getOffset())); //Particle position pos
-
+			UT_Vector weights(0, 64);
+			UT_VectorT<UT_Vector3> weight_gradients(0, 64);
 			int p_gridx = 0;
 			int p_gridy = 0;
 			int p_gridz = 0;
 			g_nvel_field->posToIndex(0,pos,p_gridx,p_gridy,p_gridz); //Get grid position
-			UT_Vector weights(0, 27);
-			UT_VectorT<UT_Vector3> weight_gradients(0, 27);
+
 			for (int idx=0, z=p_gridz-1, z_end=p_gridz+2; z<=z_end; z++){
 				//Z-dimension interpolation
 				float z_pos = z-p_gridz,
@@ -226,46 +226,81 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 					float y_pos = y-p_gridy,
 						wy = SIM_SnowSolver::bspline(y_pos),
 						dy = SIM_SnowSolver::bsplineSlope(y_pos);
+					for (int x=p_gridx-1, x_end=p_gridx+2; x<=x_end; x++, idx++){
+						//X-dimension interpolation
+						float x_pos = x-p_gridx,
+							wx = SIM_SnowSolver::bspline(x_pos),
+							dx = SIM_SnowSolver::bsplineSlope(x_pos);
+						
+						//Final weight is dyadic product of weights in each dimension
+						float weight = wx*wy;
+						weights.assign(&weight, idx, idx);
 
-						for (int x=p_gridx-1, x_end=p_gridx+2; x<=x_end; x++, idx++){
-							//X-dimension interpolation
-							float x_pos = x-p_gridx,
-								wx = SIM_SnowSolver::bspline(x_pos),
-								dx = SIM_SnowSolver::bsplineSlope(x_pos);
-							
-							//Final weight is dyadic product of weights in each dimension
-							float weight = wx*wy;
-							/////////////////////////////////////////Weights storage?!?!?
-							//p.weights[idx] = weight;
-							weights.assign(&weight, idx, idx);
+						//Weight gradient is a vector of partial derivatives
+						const UT_Vector3 newWeight(UT_Vector3(dx*wx, dy*wy, dz*wz));		 
+						weight_gradients.setSubvector3(idx, newWeight);
 
-							//Weight gradient is a vector of partial derivatives
-							/////////////////////////////////////////Weight gradient storage?!?!?
-							//p.weight_gradient[idx].setData(dx*wy, wx*dy);
-
-							//Doesn't compile . . .
-							//weight_gradients.assign(UT_Vector3(dx*wx, dy*wy, dz*wz), idx, idx);
-
-							//Interpolate mass
-						    float node_mass = g_mass->getValue(x,y,z);
-
-							float particle_mass(p_mass.get(it.getOffset()));
-							node_mass += weight*particle_mass; 
-							g_mass->setValue(x,y,z,node_mass);
-						}
+						//Interpolate mass
+					    float node_mass = g_mass->getValue(x,y,z);
+						float particle_mass(p_mass.get(it.getOffset()));
+						node_mass += weight*particle_mass; 
+						g_mass->setValue(x,y,z,node_mass);
+					}
 				}
 			}
-			p_wh.set(it.getOffset(), weights);
-			p_wgh.set(it.getOffset(), weight_gradients);
+			//Causes a crash!
+			//p_wh.set(it.getOffset(), weights);
+			//p_wgh.set(it.getOffset(), weight_gradients);
 		}
 	}
 
 	/// STEP #2: First timestep only - Estimate particle volumes using grid mass
-
 	if(time == 0.0){
 		
+		for (GA_Iterator it(gdp_out->getPointRange()); !it.atEnd(); it.advance()) //Iterate through particles
+		{
+			const UT_Vector3 pos(p_position.get(it.getOffset())); //Particle position pos
+
+			float density = 0;				
+			int p_gridx = 0;
+			int p_gridy = 0;
+			int p_gridz = 0;
+			g_nvel_field->posToIndex(0,pos,p_gridx,p_gridy,p_gridz); //Get grid position
+		
+			for (int idx=0, z=p_gridz-1, z_end=z+3; z<=z_end; z++){
+				for (int y=p_gridy-1, y_end=y+3; y<=y_end; y++){
+					for (int x=p_gridx-1, x_end=x+3; x<=x_end; x++, idx++){
+						float w = .1;//p.weights[idx];
+						if (w > BSPLINE_EPSILON){
+							density += w * (g_mass->getValue(x,y,z));
+						}
+					}
+				}
+			}
+
+			float oldDensity(p_density.get(it.getOffset()));
+			oldDensity /= .1*.1*.1;
+
+			//This seems to only apply to the current call
+			p_density.set(it.getOffset(),oldDensity);
+
+			//p.density /= .1*.1*.1;			
+			//Have division size as parameter!!
+			//p.volume = p.mass / p.density;
+			//p_mass.set(it.getOffset(),.1); //Particle position pos
+		}
 	}
-	
+	int num = 0;
+	for (GA_Iterator it(gdp_out->getPointRange()); !it.atEnd(); it.advance()) //Iterate through particles
+	{
+		//This prints out 1000 for density on the 1st timestep (calculated above on that timstep), but after goes back to the default of 1
+		float oldDensity(p_density.get(it.getOffset()));
+		if(num == 100){
+			cout << oldDensity << endl;
+		}
+		num++;
+	}
+
 	/// STEP #3: Transfer velocity to grid
 	
 	/// STEP #4: Compute new grid velocities
