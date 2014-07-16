@@ -109,7 +109,8 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 	
 	//Get particle data
 	//Do we use the attribute name???
-	GU_DetailHandle gdh = geometry->getGeometry().getWriteableCopy();
+	// GU_DetailHandle gdh = geometry->getGeometry().getWriteableCopy();
+	GU_DetailHandle gdh = geometry->getOwnGeometry();
 	const GU_Detail* gdp_in = gdh.readLock(); // Must unlock later
 	GU_Detail* gdp_out = gdh.writeLock();
 
