@@ -100,7 +100,8 @@ const SIM_DopDescription* SIM_SnowSolver::getDescription(){
 bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_Time time, SIM_Time timestep){
 	/// STEP #0: Retrieve all data objects from Houdini
 
-	SIM_GeometryCopy* geometry = (SIM_GeometryCopy*)obj->getNamedSubData("particles");
+	// SIM_GeometryCopy* geometry = (SIM_GeometryCopy*)obj->getNamedSubData("particles");
+	SIM_Geometry* geometry = (SIM_Geometry*)obj->getNamedSubData("particles");
 	if (!geometry)
 	{
 		return true;
@@ -189,6 +190,13 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 		// There is no type for array attributes, but apparently a type is not required.
 		// p_w.setTypeInfo(GA_TYPE_VECTOR);
 		p_wh = GA_RWHandleT<UT_Vector>(p_w);
+
+		// DEBUG ==========================================================================
+		std::string filepath = "~/snow_solver_test.txt";
+		FILE *tfile = fopen(filepath.c_str(), "w");
+		fputs("Added tuple attribute\n", tfile);
+		fclose(tfile);
+		// DEBUG ==========================================================================
 	}
 
 	// Not sure how to make this work yet
