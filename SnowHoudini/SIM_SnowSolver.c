@@ -20,6 +20,7 @@
 #include <iostream>
 #include <stdio.h>
 #include <string>
+#include <vector>
 
 //Houdini hook
 void initializeSIM(void *){
@@ -182,31 +183,46 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 	//TODO: should we reset grid here, or in a separate node?
 	//		we're resizing the grid separately, so we could just do the reset after that...
 	
-	GA_RWHandleT<UT_Vector> p_wh(gdp_out->findPointAttribute("p_w"));
-	if (!p_wh.isValid())
-	{
-		GA_RWAttributeRef p_w;
-		// Don't create this attribute from the particles, it must be created here.
-		p_w = gdp_out->addFloatTuple(GA_ATTRIB_POINT, "p_w", 64, GA_Defaults(0.0));
-		// There is no type for array attributes, but apparently a type is not required.
-		// p_w.setTypeInfo(GA_TYPE_VECTOR);
-		p_wh = GA_RWHandleT<UT_Vector>(p_w);
+	// GA_RWHandleT<UT_Vector> p_wh(gdp_out->findPointAttribute("p_w"));
+	// if (!p_wh.isValid())
+	// {
+	// 	GA_RWAttributeRef p_w;
+	// 	// Don't create this attribute from the particles, it must be created here.
+	// 	p_w = gdp_out->addFloatTuple(GA_ATTRIB_POINT, "p_w", 64, GA_Defaults(0.0));
+	// 	// There is no type for array attributes, but apparently a type is not required.
+	// 	// p_w.setTypeInfo(GA_TYPE_VECTOR);
+	// 	p_wh = GA_RWHandleT<UT_Vector>(p_w);
 
-		// DEBUG ==========================================================================
-		std::string filepath = "~/snow_solver_test.txt";
-		FILE *tfile = fopen(filepath.c_str(), "w");
-		fputs("Added tuple attribute\n", tfile);
-		fclose(tfile);
-		// DEBUG ==========================================================================
-	}
+	// 	// DEBUG ==========================================================================
+	// 	std::string filepath = "~/snow_solver_test.txt";
+	// 	FILE *tfile = fopen(filepath.c_str(), "w");
+	// 	fputs("Added tuple attribute\n", tfile);
+	// 	fclose(tfile);
+	// 	// DEBUG ==========================================================================
+	// }
 
 	// Not sure how to make this work yet
-	GA_RWHandleT<UT_VectorT<UT_Vector3> > p_wgh(gdp_out->findPointAttribute("p_wg"));
-	if(!p_wgh.isValid())
+	// GA_RWHandleT<UT_VectorT<UT_Vector3> > p_wgh(gdp_out->findPointAttribute("p_wg"));
+	// if(!p_wgh.isValid())
+	// {
+	// 	GA_RWAttributeRef p_wg;
+	// 	p_wg = gdp_out->addFloatTuple(GA_ATTRIB_POINT, "p_wg", 64, GA_Defaults(0.0)); // UT_Vector3(0.0, 0.0, 0.0) doesn't work . . .
+	// 	p_wgh = GA_RWHandleT<UT_VectorT<UT_Vector3> >(p_wg);
+	// }
+
+	int point_count = gdp_out->getPointRange().getEntries();
+	int weight_count = 64;
+	double p_wg[point_count][weight_count];
+	// UT_Vector3 p_wgh[point_count][64]; // Doesn't work with C99
+	std::vector<std::vector<UT_Vector3> > p_wgh;
+	for(int i=0; i<point_count; i++)
 	{
-		GA_RWAttributeRef p_wg;
-		p_wg = gdp_out->addFloatTuple(GA_ATTRIB_POINT, "p_wg", 64, GA_Defaults(0.0)); // UT_Vector3(0.0, 0.0, 0.0) doesn't work . . .
-		p_wgh = GA_RWHandleT<UT_VectorT<UT_Vector3> >(p_wg);
+		std::vector<UT_Vector3> empty;
+		for(int j=0; j<weight_count; j++)
+		{
+			empty.push_back(UT_Vector3(0.0, 0.0, 0.0));
+		}
+		p_wgh.push_back(empty);
 	}
 
 	/// STEP #1: Transfer mass to grid 	
@@ -243,11 +259,13 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 						
 						//Final weight is dyadic product of weights in each dimension
 						float weight = wx*wy;
-						weights.assign(&weight, idx, idx);
+						p_wg[it.getOffset()][idx] = weight;
+						// weights.assign(&weight, idx, idx);
 
 						//Weight gradient is a vector of partial derivatives
 						const UT_Vector3 newWeight(UT_Vector3(dx*wx, dy*wy, dz*wz));		 
-						weight_gradients.setSubvector3(idx, newWeight);
+						// weight_gradients.setSubvector3(idx, newWeight);
+						p_wgh[it.getOffset()][idx] = newWeight;
 
 						//Interpolate mass
 					    float node_mass = g_mass->getValue(x,y,z);
