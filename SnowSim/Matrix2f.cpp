@@ -1,6 +1,8 @@
 #include "Matrix2f.h"
 
-Matrix2f::Matrix2f(){}
+Matrix2f::Matrix2f(){
+	setData(0.0);
+}
 Matrix2f::Matrix2f(float i11, float i12, float i21, float i22){
 	setData(i11, i12, i21, i22);
 }

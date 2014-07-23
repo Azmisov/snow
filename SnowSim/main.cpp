@@ -57,6 +57,16 @@ int main(int argc, char** argv){
 	img_buffer = new unsigned char[bsize];
 #endif
 	
+	/*
+	Shape* x = new Shape();
+	x->addPoint(.6, .6);
+	x->addPoint(.6, .4);
+	x->addPoint(.4, .4);
+	x->addPoint(.4, .6);
+	snow_shapes.push_back(x);
+	start_simulation();
+	//*/
+	
 	while (!glfwWindowShouldClose(window)){
 		if (dirty_buffer){
 			redraw();
@@ -74,7 +84,47 @@ int main(int argc, char** argv){
 #if SCREENCAST
 	FreeImage_DeInitialise();
 	delete[] img_buffer;
-#endif	
+#endif
+	
+	glfwDestroyWindow(window);
+	glfwTerminate();
+	exit(EXIT_SUCCESS);
+	return 0;
+	//Setup OpenGL context
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glViewport(0, 0, WIN_SIZE, WIN_SIZE);
+	glOrtho(0, WIN_METERS, 0, WIN_METERS, 0, 1);
+	
+	//Drawing & event loop
+	//Create directory to save buffers in
+#if SCREENCAST
+	mkdir(SCREENCAST_DIR,0777);
+	FreeImage_Initialise();
+	img_buffer = new unsigned char[bsize];
+#endif
+	start_simulation();
+	
+	while (!glfwWindowShouldClose(window)){
+		if (dirty_buffer){
+			redraw();
+			dirty_buffer = false;
+#if SCREENCAST
+			if (simulating)
+				save_buffer(frame_count++);
+#endif
+		}
+		glfwSwapBuffers(window);
+		glfwPollEvents();
+	}
+
+	//Exit
+#if SCREENCAST
+	FreeImage_DeInitialise();
+	delete[] img_buffer;
+#endif
 	
 	glfwDestroyWindow(window);
 	glfwTerminate();
@@ -108,7 +158,6 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 			if (!simulating)
 				circle_draw_state = 1;
 			break;
-		default: return;
 	}
 }
 //Mouse listener
@@ -176,7 +225,7 @@ void remove_all_shapes(){
 //float TIMESTEP;
 void start_simulation(){	
 	//Convert drawn shapes to snow particles
-	snow = PointCloud::createShape(snow_shapes, Vector2f(2.5, 0));
+	snow = PointCloud::createShape(snow_shapes, Vector2f(0, 0));
 	//If there are no shapes, we can't do a simulation
 	if (snow == NULL) return;
 	point_size = 6;
@@ -190,6 +239,7 @@ void start_simulation(){
 	pthread_t sim_thread;
 	pthread_create(&sim_thread, NULL, simulate, NULL);
 }
+
 void *simulate(void *args){
 	simulating = true;
 	struct timespec delay;
@@ -203,6 +253,7 @@ void *simulate(void *args){
 	while (simulating && ++iter > 0){
 		//TIMESTEP = adaptive_timestep();
 		cum_sum += TIMESTEP;
+		
 		//Initialize FEM grid
 		grid->initializeMass();
 		grid->initializeVelocities();
@@ -214,12 +265,14 @@ void *simulate(void *args){
 		grid->updateVelocities();
 		//Update particle data
 		snow->update();
+		
 		//Redraw snow
 		if (!LIMIT_FPS || cum_sum >= FRAMERATE){
 			dirty_buffer = true;
 			cum_sum -= FRAMERATE;
 		}
 		//Realtime visualization (approximate)
+		/*
 		clock_t end_new = clock()+15;
 		float diff = (end_new-end)/(float) CLOCKS_PER_SEC;
 		end = end_new;
@@ -230,6 +283,7 @@ void *simulate(void *args){
 		//Slow motion playback
 		delay.tv_nsec = SLO_MO;
 		nanosleep(&delay, NULL);
+		*/
 	}
 
 	cout << "Simulation complete: " << (clock()-start)/(float) CLOCKS_PER_SEC << " seconds\n" << endl;

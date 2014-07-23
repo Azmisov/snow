@@ -9,7 +9,7 @@
 #define AREA_EPSILON 1e-5
 
 inline float random_number(float lo, float hi){
-	 return lo + rand() / (float) (RAND_MAX/(hi-lo));
+	return lo + rand() / (float) (RAND_MAX/(hi-lo));
 }
 
 class PointCloud {
@@ -83,6 +83,7 @@ public:
 				
 				//Randomly scatter points in the shape until the quota is met
 				int points_found = 0;
+				srand(5);
 				while (points_found != points){
 					float tx = random_number(bounds[0], bounds[1]),
 						ty = random_number(bounds[2], bounds[3]);
@@ -95,7 +96,7 @@ public:
 						//Add the snow particle
 						obj->particles.push_back(Particle(
 							Vector2f(tx, ty), Vector2f(velocity), particle_mass, lambda, mu
-						));
+						));						
 						points_found++;
 					}
 				}

@@ -5,14 +5,12 @@ Particle::Particle(const Vector2f& pos, const Vector2f& vel, float mass, float l
 	position.setData(pos);
 	velocity.setData(vel);
 	this->mass = mass;
-	lambda_s = lame_lambda;
-	mu_s = lame_mu;
+	lambda = lame_lambda;
+	mu = lame_mu;
 	//To start out with, we assume the deformation gradient is zero
 	//Or in other words, all particle velocities are the same
 	def_elastic.loadIdentity();
 	def_plastic.loadIdentity();
-	det_elastic = 1;
-	det_plastic = 1;
 	svd_e.setData(1, 1);
 	svd_w.loadIdentity();
 	svd_v.loadIdentity();
@@ -46,10 +44,12 @@ void Particle::applyPlasticity(){
 			svd_e[i] = CRIT_STRETCH;
 	}
 	//Compute polar decomposition, from clamped SVD
-	polar_r.setData(svd_w*svd_v_trans);
-	polar_s.setData(svd_v);
-	polar_s.diag_product(svd_e);
-	polar_s.setData(polar_s*svd_v_trans);
+	/*
+		polar_r.setData(svd_w*svd_v_trans);
+		polar_s.setData(svd_v);
+		polar_s.diag_product(svd_e);
+		polar_s.setData(polar_s*svd_v_trans);
+	//*/
 	
 	//Recompute elastic and plastic gradient
 	//We're basically just putting the SVD back together again
@@ -58,35 +58,17 @@ void Particle::applyPlasticity(){
 	w_cpy.diag_product(svd_e);
 	def_plastic = v_cpy*svd_w.transpose()*f_all;
 	def_elastic = w_cpy*svd_v.transpose();
-	
-	//Update lame parameters to account for hardening
-	det_elastic = def_elastic.determinant();
-	det_plastic = def_plastic.determinant();
-	float scale = exp(HARDENING*(1-det_plastic));
-	mu = mu_s*scale;
-	lambda = lambda_s*scale;
 }
 const Matrix2f Particle::energyDerivative(){
-	/* Stress force on each particle is: -volume*cauchy_stress
-		We transfer the force to the FEM grid using the shape function gradient
-		cauchy_stress can be computed via: (2u(Fe - Re)*Fe^T + y(Je - 1)Je*I)/J
-			I: identity matrix
-			Fe: elastic deformation gradient
-			Fp: plastic deformation gradient
-			Re: rotation term of Fe's polar decomposition
-				equivalent to WV* from SVD decomposition
-			J: determinant of Fe*Fp
-			Je: determinant of Fe
-			u/y: Lame parameters
-
-		Note: volume = volume_initial*J, so the J drops out
-	*/
-	
-	Matrix2f temp = def_elastic - polar_r;
-	temp *= 2*mu;
-	Matrix2f temp2 = temp*def_elastic.transpose();
-	temp2.diag_sum(lambda*det_elastic*(det_elastic-1));
-	return volume * temp2;
+	//Adjust lame parameters to account for hardening
+	float harden = exp(HARDENING*(1-def_plastic.determinant())),
+		Je = svd_e.product();
+	//This is the co-rotational term
+	Matrix2f temp = 2*mu*(def_elastic - svd_w*svd_v.transpose())*def_elastic.transpose();
+	//Add in the primary contour term
+	temp.diag_sum(lambda*Je*(Je-1));
+	//Add hardening and volume
+	return volume * harden * temp;
 }
 const Vector2f Particle::deltaForce(const Vector2f& u, const Vector2f& weight_grad){
 	//For detailed explanation, check out the implicit math pdf for details
@@ -94,7 +76,7 @@ const Vector2f Particle::deltaForce(const Vector2f& u, const Vector2f& weight_gr
 	
 	//Finds delta(Fe), where Fe is the elastic deformation gradient
 	//Probably can optimize this expression with parentheses...
-	Matrix2f del_elastic = TIMESTEP*u.dyadic_product(weight_grad)*def_elastic;
+	Matrix2f del_elastic = TIMESTEP*u.outer_product(weight_grad)*def_elastic;
 	
 	//Check to make sure we should do these calculations?
 	if (del_elastic[0][0] < MATRIX_EPSILON && del_elastic[0][1] < MATRIX_EPSILON &&
@@ -139,7 +121,7 @@ const Vector2f Particle::deltaForce(const Vector2f& u, const Vector2f& weight_gr
 	Ap *= 2*mu;
 	//Primary contour term
 	cofactor *= cofactor.frobeniusInnerProduct(del_elastic);
-	del_cofactor *= (det_elastic-1);
+	del_cofactor *= (def_elastic.determinant()-1);
 	cofactor += del_cofactor;
 	cofactor *= lambda;
 	Ap += cofactor;

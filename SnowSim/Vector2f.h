@@ -29,7 +29,7 @@ public:
 	const float length() const;
 	const float length_squared() const;
 	//Vector * Vector^T
-	const Matrix2f dyadic_product(const Vector2f& v) const;
+	const Matrix2f outer_product(const Vector2f& v) const;
 	
 	//OVERLOADS
 	//Unary negation

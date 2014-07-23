@@ -12,7 +12,7 @@ public:
 	Vector2f position, velocity;
 	Matrix2f velocity_gradient;
 	//Lame parameters (_s denotes starting configuration)
-	float lambda_s, lambda, mu_s, mu;
+	float lambda, mu;
 	//Deformation gradient (elastic and plastic parts)
 	Matrix2f def_elastic, def_plastic;
 	//Cached SVD's for elastic deformation gradient
@@ -20,8 +20,6 @@ public:
 	Vector2f svd_e;
 	//Cached polar decomposition
 	Matrix2f polar_r, polar_s;
-	//Cached determinants
-	float det_elastic, det_plastic;
 	//Grid interpolation weights
 	Vector2f grid_position;
 	Vector2f weight_gradient[16];

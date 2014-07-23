@@ -30,17 +30,18 @@ void Grid::initializeMass(){
 		float ox = p.grid_position[0],
 			oy = p.grid_position[1];
 		
+		
 		//Shape function gives a blending radius of two;
 		//so we do computations within a 2x2 square for each particle
-		for (int idx=0, y=oy-1, y_end=oy+2; y<=y_end; y++){
+		for (int idx=0, y=oy-1, y_end=y+3; y<=y_end; y++){
 			//Y-dimension interpolation
-			float y_pos = y-oy,
+			float y_pos = oy-y,
 				wy = Grid::bspline(y_pos),
 				dy = Grid::bsplineSlope(y_pos);
 			
-			for (int x=ox-1, x_end=ox+2; x<=x_end; x++, idx++){
+			for (int x=ox-1, x_end=x+3; x<=x_end; x++, idx++){
 				//X-dimension interpolation
-				float x_pos = x-ox,
+				float x_pos = ox-x,
 					wx = Grid::bspline(x_pos),
 					dx = Grid::bsplineSlope(x_pos);
 				
@@ -49,7 +50,9 @@ void Grid::initializeMass(){
 				p.weights[idx] = weight;
 				
 				//Weight gradient is a vector of partial derivatives
-				p.weight_gradient[idx].setData(dx*wy, wx*dy);
+				p.weight_gradient[idx].setData(dx*wy, wx*dy);				
+				//I don't know why we need to do this... JT did it, doesn't appear in tech paper
+				p.weight_gradient[idx] /= cellsize;
 				
 				//Interpolate mass
 				nodes[(int) (y*size[0]+x)].mass += weight*p.mass;
@@ -63,17 +66,23 @@ void Grid::initializeVelocities(){
 		Particle& p = obj->particles[i];
 		int ox = p.grid_position[0],
 			oy = p.grid_position[1];
-		for (int idx=0, y=oy-1, y_end=oy+2; y<=y_end; y++){
-			for (int x=ox-1, x_end=ox+2; x<=x_end; x++, idx++){
+		for (int idx=0, y=oy-1, y_end=y+3; y<=y_end; y++){
+			for (int x=ox-1, x_end=x+3; x<=x_end; x++, idx++){
 				float w = p.weights[idx];
 				if (w > BSPLINE_EPSILON){
 					//Interpolate velocity
 					int n = (int) (y*size[0]+x);
 					//We could also do a separate loop to divide by nodes[n].mass only once
-					nodes[n].velocity += p.velocity * w * (p.mass/nodes[n].mass);
+					nodes[n].velocity += p.velocity * w * p.mass;
+					nodes[n].active = true;
 				}
 			}
 		}
+	}
+	for (int i=0; i<nodes_length; i++){
+		GridNode &node = nodes[i];
+		if (node.active)
+			node.velocity /= node.mass;
 	}
 	collisionGrid();
 }
@@ -87,8 +96,8 @@ void Grid::calculateVolumes() const{
 			oy = p.grid_position[1];
 		//First compute particle density
 		p.density = 0;
-		for (int idx=0, y=oy-1, y_end=oy+2; y<=y_end; y++){
-			for (int x=ox-1, x_end=ox+2; x<=x_end; x++, idx++){
+		for (int idx=0, y=oy-1, y_end=y+3; y<=y_end; y++){
+			for (int x=ox-1, x_end=x+3; x<=x_end; x++, idx++){
 				float w = p.weights[idx];
 				if (w > BSPLINE_EPSILON){
 					//Node density is trivial
@@ -109,14 +118,13 @@ void Grid::explicitVelocities(const Vector2f& gravity){
 		Matrix2f energy = p.energyDerivative();
 		int ox = p.grid_position[0],
 			oy = p.grid_position[1];
-		for (int idx=0, y=oy-1, y_end=oy+2; y<=y_end; y++){
-			for (int x=ox-1, x_end=ox+2; x<=x_end; x++, idx++){
+		for (int idx=0, y=oy-1, y_end=y+3; y<=y_end; y++){
+			for (int x=ox-1, x_end=x+3; x<=x_end; x++, idx++){
 				float w = p.weights[idx];
 				if (w > BSPLINE_EPSILON){
 					//Weight the force onto nodes
 					int n = (int) (y*size[0]+x);
 					nodes[n].force += energy*p.weight_gradient[idx];
-					nodes[n].has_velocity = true;
 				}
 			}
 		}
@@ -126,7 +134,7 @@ void Grid::explicitVelocities(const Vector2f& gravity){
 	for (int i=0; i<nodes_length; i++){
 		GridNode &node = nodes[i];
 		//Check to see if this node needs to be computed
-		if (node.has_velocity){
+		if (node.active){
 			node.velocity_new = node.velocity + TIMESTEP*(gravity - node.force/node.mass);
 			//Force is used by implicit calculator, so we should reset it
 			node.force.setData(0);
@@ -150,8 +158,8 @@ void Grid::implicitVelocities(){
 	//INITIALIZE LINEAR SOLVE
 	for (int idx=0; idx<nodes_length; idx++){
 		GridNode& n = nodes[idx];
-		n.active = n.has_velocity;
-		if (n.active){
+		n.imp_active = n.active;
+		if (n.imp_active){
 			//recomputeImplicitForces will compute Er, given r
 			//Initially, we want vf - E*vf; so we'll temporarily set r to vf
 			n.r.setData(n.velocity_new);
@@ -163,7 +171,7 @@ void Grid::implicitVelocities(){
 	recomputeImplicitForces();
 	for (int idx=0; idx<nodes_length; idx++){
 		GridNode& n = nodes[idx];
-		if (n.active){
+		if (n.imp_active){
 			n.r = n.velocity_new - n.Er;
 			//p starts out equal to residual
 			n.p = n.r;
@@ -176,7 +184,7 @@ void Grid::implicitVelocities(){
 	//Ep starts out the same as Er
 	for (int idx=0; idx<nodes_length; idx++){
 		GridNode& n = nodes[idx];
-		if (n.active)
+		if (n.imp_active)
 			n.Ep = n.Er;
 	}
 	
@@ -186,7 +194,7 @@ void Grid::implicitVelocities(){
 		for (int idx=0; idx<nodes_length; idx++){
 			GridNode& n = nodes[idx];
 			//Only perform calculations on nodes that haven't been solved yet
-			if (n.active){
+			if (n.imp_active){
 				//Alright, so we'll handle each node's solve separately
 				//First thing to do is update our vf guess
 				float div = n.Ep.dot(n.Ep);
@@ -195,7 +203,7 @@ void Grid::implicitVelocities(){
 				//If the error is small enough, we're done
 				float err = n.err.length();
 				if (err < MAX_IMPLICIT_ERR || err > MIN_IMPLICIT_ERR || isnan(err)){
-					n.active = false;
+					n.imp_active = false;
 					continue;
 				}
 				else done = false;
@@ -211,7 +219,7 @@ void Grid::implicitVelocities(){
 		//Calculate the gradient for our next guess
 		for (int idx=0; idx<nodes_length; idx++){
 			GridNode& n = nodes[idx];
-			if (n.active){
+			if (n.imp_active){
 				float temp = n.r.dot(n.Er);
 				float beta = temp / n.rEr;
 				n.rEr = temp;
@@ -230,10 +238,10 @@ void Grid::recomputeImplicitForces(){
 		Particle& p = obj->particles[i];
 		int ox = p.grid_position[0],
 			oy = p.grid_position[1];
-		for (int idx=0, y=oy-1, y_end=oy+2; y<=y_end; y++){
-			for (int x=ox-1, x_end=ox+2; x<=x_end; x++, idx++){
+		for (int idx=0, y=oy-1, y_end=y+3; y<=y_end; y++){
+			for (int x=ox-1, x_end=x+3; x<=x_end; x++, idx++){
 				GridNode& n = nodes[(int) (y*size[0]+x)];
-				if (n.active){
+				if (n.imp_active){
 					//I don't think there is any way to cache intermediary
 					//results for reuse with each iteration, unfortunately
 					n.force += p.deltaForce(n.r, p.weight_gradient[idx]);
@@ -246,7 +254,7 @@ void Grid::recomputeImplicitForces(){
 	//	r - IMPLICIT_RATIO*TIMESTEP*delta_force/mass
 	for (int idx=0; idx<nodes_length; idx++){
 		GridNode& n = nodes[idx];
-		if (n.active)
+		if (n.imp_active)
 			n.Er = n.r - IMPLICIT_RATIO*TIMESTEP/n.mass*n.force;
 	}
 }
@@ -265,8 +273,8 @@ void Grid::updateVelocities() const{
 		
 		int ox = p.grid_position[0],
 			oy = p.grid_position[1];
-		for (int idx=0, y=oy-1, y_end=oy+2; y<=y_end; y++){
-			for (int x=ox-1, x_end=ox+2; x<=x_end; x++, idx++){
+		for (int idx=0, y=oy-1, y_end=y+3; y<=y_end; y++){
+			for (int x=ox-1, x_end=x+3; x<=x_end; x++, idx++){
 				float w = p.weights[idx];
 				if (w > BSPLINE_EPSILON){
 					GridNode &node = nodes[(int) (y*size[0]+x)];
@@ -275,7 +283,7 @@ void Grid::updateVelocities() const{
 					//Fluid implicit particle
 					flip += (node.velocity_new - node.velocity)*w;
 					//Velocity gradient
-					grad += node.velocity_new.dyadic_product(p.weight_gradient[idx]);
+					grad += node.velocity_new.outer_product(p.weight_gradient[idx]);
 					//VISUALIZATION ONLY: Update density
 					p.density += w * node.mass;
 				}
@@ -289,8 +297,7 @@ void Grid::updateVelocities() const{
 	collisionParticles();
 }
 
-const int border_layers = 2;
-const float cor = 0;
+const int BSPLINE_RADIUS = 2;
 void Grid::collisionGrid(){
 	Vector2f delta_scale = Vector2f(TIMESTEP);
 	delta_scale /= cellsize;
@@ -299,22 +306,19 @@ void Grid::collisionGrid(){
 			//Get grid node (equivalent to (y*size[0] + x))
 			GridNode &node = nodes[idx];
 			//Check to see if this node needs to be computed
-			if (node.has_velocity){
+			if (node.active){
 				//Collision response
 				//TODO: make this work for arbitrary collision geometry
 				Vector2f new_pos = node.velocity_new*delta_scale + Vector2f(x, y);
 				//Left border, right border
-				/*
-				if (new_pos[0] < border_layers-1 || new_pos[0] > size[0]-border_layers)
-					node.velocity_new[0] = -cor*node.velocity_new[0];
-				//Bottom border
-				if (new_pos[1] < border_layers-1 || new_pos[1] > size[1]-border_layers)
-					node.velocity_new[1] = -cor*node.velocity_new[1];
-				*/
-				//Sticky collisions
-				if (new_pos[0] < border_layers-1 || new_pos[0] > size[0]-border_layers ||
-					new_pos[1] < border_layers-1 || new_pos[1] > size[1]-border_layers){
-					node.velocity_new.setData(0);
+				if (new_pos[0] < BSPLINE_RADIUS || new_pos[0] > size[0]-BSPLINE_RADIUS-1){
+					node.velocity_new[0] = 0;
+					node.velocity_new[1] *= STICKY;
+				}
+				//Bottom border, top border
+				if (new_pos[1] < BSPLINE_RADIUS || new_pos[1] > size[1]-BSPLINE_RADIUS-1){
+					node.velocity_new[0] *= STICKY;
+					node.velocity_new[1] = 0;
 				}
 			}
 		}
@@ -324,18 +328,11 @@ void Grid::collisionParticles() const{
 	for (int i=0; i<obj->size; i++){
 		Particle& p = obj->particles[i];
 		Vector2f new_pos = p.grid_position + TIMESTEP*p.velocity/cellsize;
-		/*
 		//Left border, right border
-		if (new_pos[0] < border_layers-1 || new_pos[0] > size[0]-border_layers)
-			p.velocity[0] = -cor*p.velocity[0];
-		//Bottom border
-		if (new_pos[1] < border_layers-1 || new_pos[1] > size[1]-border_layers)
-			p.velocity[1] = -cor*p.velocity[1];
-		*/
-		//Sticky collisions
-		if (new_pos[0] < border_layers-1 || new_pos[0] > size[0]-border_layers ||
-			new_pos[1] < border_layers-1 || new_pos[1] > size[1]-border_layers){
-			p.velocity.setData(0);
-		}
+		if (new_pos[0] < BSPLINE_RADIUS-1 || new_pos[0] > size[0]-BSPLINE_RADIUS)
+			p.velocity[0] = -STICKY*p.velocity[0];
+		//Bottom border, top border
+		if (new_pos[1] < BSPLINE_RADIUS-1 || new_pos[1] > size[1]-BSPLINE_RADIUS)
+			p.velocity[1] = -STICKY*p.velocity[1];
 	}
 }

@@ -50,7 +50,7 @@ const float Vector2f::length_squared() const{
 		sum += data[i]*data[i];
 	return sum;
 }
-const Matrix2f Vector2f::dyadic_product(const Vector2f& v) const{
+const Matrix2f Vector2f::outer_product(const Vector2f& v) const{
 	return Matrix2f(
 		data[0]*v.data[0], data[0]*v.data[1],
 		data[1]*v.data[0], data[1]*v.data[1]
