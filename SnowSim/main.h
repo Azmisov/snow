@@ -17,6 +17,8 @@
 #include "SimConstants.h"
 #include "Shape.h"
 
+float TIMESTEP;
+
 static void error_callback(int, const char*);
 void key_callback(GLFWwindow*, int, int, int, int);
 void mouse_callback(GLFWwindow*, int, int, int);

@@ -225,7 +225,7 @@ void remove_all_shapes(){
 //float TIMESTEP;
 void start_simulation(){	
 	//Convert drawn shapes to snow particles
-	snow = PointCloud::createShape(snow_shapes, Vector2f(0, 0));
+	snow = PointCloud::createShape(snow_shapes, Vector2f(1, 0));
 	//If there are no shapes, we can't do a simulation
 	if (snow == NULL) return;
 	point_size = 6;
@@ -239,19 +239,18 @@ void start_simulation(){
 	pthread_t sim_thread;
 	pthread_create(&sim_thread, NULL, simulate, NULL);
 }
-
 void *simulate(void *args){
 	simulating = true;
 	struct timespec delay;
 	delay.tv_sec = 0;
 	clock_t start = clock(), end;
 	cout << "Starting simulation..." << endl;
-	Vector2f gravity = Vector2f(0, -9.8);
+	Vector2f gravity = Vector2f(0, -1);
 	
 	float cum_sum = 0;
 	int iter = 0;
 	while (simulating && ++iter > 0){
-		//TIMESTEP = adaptive_timestep();
+		TIMESTEP = adaptive_timestep();
 		cum_sum += TIMESTEP;
 		
 		//Initialize FEM grid
@@ -259,8 +258,10 @@ void *simulate(void *args){
 		grid->initializeVelocities();
 		//Compute grid velocities
 		grid->explicitVelocities(gravity);
+#if ENABLE_IMPLICIT
 		if (IMPLICIT_RATIO > 0)
 			grid->implicitVelocities();
+#endif
 		//Map back to particles
 		grid->updateVelocities();
 		//Update particle data
@@ -272,7 +273,7 @@ void *simulate(void *args){
 			cum_sum -= FRAMERATE;
 		}
 		//Realtime visualization (approximate)
-		/*
+#if REALTIME
 		clock_t end_new = clock()+15;
 		float diff = (end_new-end)/(float) CLOCKS_PER_SEC;
 		end = end_new;
@@ -283,7 +284,7 @@ void *simulate(void *args){
 		//Slow motion playback
 		delay.tv_nsec = SLO_MO;
 		nanosleep(&delay, NULL);
-		*/
+#endif
 	}
 
 	cout << "Simulation complete: " << (clock()-start)/(float) CLOCKS_PER_SEC << " seconds\n" << endl;
@@ -293,9 +294,8 @@ void *simulate(void *args){
 float adaptive_timestep(){
 	float max_vel = snow->max_velocity;
 	if (max_vel > 1e-8){
-		//TODO: this assumes cellsize[0] == cellsize[1]
-		//We should really take the min(cellsize)
-		float dt = 0.01 / sqrt(max_vel) / grid->cellsize[0];
+		//We should really take the min(cellsize) I think, if the grid is not square
+		float dt = CFL * grid->cellsize[0]/sqrt(max_vel);
 		return dt > FRAMERATE ? FRAMERATE : dt;
 	}
 	return FRAMERATE;

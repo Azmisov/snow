@@ -27,8 +27,7 @@ void Grid::initializeMass(){
 		//Particle position to grid coordinates
 		//This will give errors if the particle is outside the grid bounds
 		p.grid_position = (p.position - origin)/cellsize;
-		float ox = p.grid_position[0],
-			oy = p.grid_position[1];
+		float ox = p.grid_position[0], oy = p.grid_position[1];
 		
 		
 		//Shape function gives a blending radius of two;
@@ -112,6 +111,8 @@ void Grid::calculateVolumes() const{
 }
 //Calculate next timestep velocities for use in implicit integration
 void Grid::explicitVelocities(const Vector2f& gravity){
+	//First, compute the forces
+	//We store force in velocity_new, since we're not using that variable at the moment
 	for (int i=0; i<obj->size; i++){
 		Particle& p = obj->particles[i];
 		//Solve for grid internal forces
@@ -124,7 +125,7 @@ void Grid::explicitVelocities(const Vector2f& gravity){
 				if (w > BSPLINE_EPSILON){
 					//Weight the force onto nodes
 					int n = (int) (y*size[0]+x);
-					nodes[n].force += energy*p.weight_gradient[idx];
+					nodes[n].velocity_new += energy*p.weight_gradient[idx];
 				}
 			}
 		}
@@ -133,15 +134,13 @@ void Grid::explicitVelocities(const Vector2f& gravity){
 	//Now we have all grid forces, compute velocities (euler integration)
 	for (int i=0; i<nodes_length; i++){
 		GridNode &node = nodes[i];
-		//Check to see if this node needs to be computed
-		if (node.active){
-			node.velocity_new = node.velocity + TIMESTEP*(gravity - node.force/node.mass);
-			//Force is used by implicit calculator, so we should reset it
-			node.force.setData(0);
-		}
+		if (node.active)
+			node.velocity_new = node.velocity + TIMESTEP*(gravity - node.velocity_new/node.mass);
 	}
 	collisionGrid();
 }
+
+#if ENABLE_IMPLICIT
 //Solve linear system for implicit velocities
 void Grid::implicitVelocities(){
 	//With an explicit solution, we compute vf = vi + (f[n]/m)*dt
@@ -258,6 +257,8 @@ void Grid::recomputeImplicitForces(){
 			n.Er = n.r - IMPLICIT_RATIO*TIMESTEP/n.mass*n.force;
 	}
 }
+#endif
+
 //Map grid velocities back to particles
 void Grid::updateVelocities() const{
 	for (int i=0; i<obj->size; i++){
@@ -297,7 +298,6 @@ void Grid::updateVelocities() const{
 	collisionParticles();
 }
 
-const int BSPLINE_RADIUS = 2;
 void Grid::collisionGrid(){
 	Vector2f delta_scale = Vector2f(TIMESTEP);
 	delta_scale /= cellsize;

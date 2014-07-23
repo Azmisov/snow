@@ -43,13 +43,13 @@ void Particle::applyPlasticity(){
 		else if (svd_e[i] > CRIT_STRETCH)
 			svd_e[i] = CRIT_STRETCH;
 	}
+#if ENABLE_IMPLICIT
 	//Compute polar decomposition, from clamped SVD
-	/*
-		polar_r.setData(svd_w*svd_v_trans);
-		polar_s.setData(svd_v);
-		polar_s.diag_product(svd_e);
-		polar_s.setData(polar_s*svd_v_trans);
-	//*/
+	polar_r.setData(svd_w*svd_v_trans);
+	polar_s.setData(svd_v);
+	polar_s.diag_product(svd_e);
+	polar_s.setData(polar_s*svd_v_trans);
+#endif
 	
 	//Recompute elastic and plastic gradient
 	//We're basically just putting the SVD back together again
@@ -70,6 +70,7 @@ const Matrix2f Particle::energyDerivative(){
 	//Add hardening and volume
 	return volume * harden * temp;
 }
+#if ENABLE_IMPLICIT
 const Vector2f Particle::deltaForce(const Vector2f& u, const Vector2f& weight_grad){
 	//For detailed explanation, check out the implicit math pdf for details
 	//Before we do the force calculation, we need deltaF, deltaR, and delta(JF^-T)
@@ -130,3 +131,4 @@ const Vector2f Particle::deltaForce(const Vector2f& u, const Vector2f& weight_gr
 	//Parentheses are important; M*M*V is slower than M*(M*V)
 	return volume*(Ap*(def_elastic.transpose()*weight_grad));
 }
+#endif
