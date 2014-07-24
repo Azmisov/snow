@@ -7,6 +7,8 @@
 #include <GA/GA_Types.h>
 #include <UT/UT_DSOVersion.h>
 #include <UT/UT_Interrupt.h>
+#include <UT/UT_Matrix3.h>
+#include <UT/UT_MatrixSolver.h>
 #include <PRM/PRM_Include.h>
 #include <SIM/SIM_PRMShared.h>
 #include <SIM/SIM_DopDescription.h>
@@ -59,7 +61,6 @@ const SIM_DopDescription* SIM_SnowSolver::getDescription(){
 	//Grid parameters (eulerian):
 	static PRM_Name g_div("div_size", "Division Size");			//grid division size
 	static PRM_Name g_mass("g_mass", "Mass Field");				//grid mass
-	static PRM_Name g_force("g_force", "Force Field");			//grid forces
 	static PRM_Name g_nvel("g_nvel", "New Velocity Field");		//grid velocity (after applying forces)
 	static PRM_Name g_ovel("g_ovel", "Old Velocity Field");		//grid velocity (before applying forces)
 	static PRM_Name g_active("g_active", "Activated Field");	//boolean field that tells whether there are particles within a radius of 2
@@ -80,7 +81,6 @@ const SIM_DopDescription* SIM_SnowSolver::getDescription(){
 		//grid
 		PRM_Template(PRM_FLT_J, 1, &g_div),
 		PRM_Template(PRM_STRING, 1, &g_mass),
-		PRM_Template(PRM_STRING, 1, &g_force),
 		PRM_Template(PRM_STRING, 1, &g_nvel),
 		PRM_Template(PRM_STRING, 1, &g_ovel),
 		PRM_Template(PRM_STRING, 1, &g_active),
@@ -138,6 +138,12 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 	//EVALUATE PARAMETERS
 	float particle_mass = .01;
 	float division_size = .1;
+	float mu = YOUNGS_MODULUS/(2+2*POISSONS_RATIO);
+	float lambda = YOUNGS_MODULUS*POISSONS_RATIO/((1+POISSONS_RATIO)*(1-2*POISSONS_RATIO));
+
+	//Posible other parameters:
+	//lambda_s (lame_lambda)
+	//mu_s (lame_mu)
 
 	float voxelArea = division_size*division_size*division_size;
 
@@ -146,11 +152,6 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 	SIM_DataArray g_mass_data;
 	getMatchingData(g_mass_data, obj, "g_mass");	
 	g_mass_field = SIM_DATA_CAST(g_mass_data[0], SIM_ScalarField);
-
-	SIM_VectorField *g_force_field;
-	SIM_DataArray g_force_data;
-	getMatchingData(g_force_data, obj, "g_force");	
-	g_force_field = SIM_DATA_CAST(g_force_data[0], SIM_VectorField);
 
 	SIM_VectorField *g_nvel_field;
 	SIM_DataArray g_nvel_data;
@@ -169,21 +170,17 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 
 	UT_VoxelArrayF* g_mass = g_mass_field->getField()->fieldNC();
 
-	UT_VoxelArrayF* g_forceX = g_force_field->getField(0)->fieldNC();
-	UT_VoxelArrayF* g_forceY = g_force_field->getField(1)->fieldNC();
-	UT_VoxelArrayF* g_forceZ = g_force_field->getField(2)->fieldNC();
-
 	UT_VoxelArrayF* g_nvelX = g_nvel_field->getField(0)->fieldNC();
 	UT_VoxelArrayF* g_nvelY = g_nvel_field->getField(1)->fieldNC();
 	UT_VoxelArrayF* g_nvelZ = g_nvel_field->getField(2)->fieldNC();
 
-	UT_VoxelArrayF* g_ovelX = g_nvel_field->getField(0)->fieldNC();
-	UT_VoxelArrayF* g_ovelY = g_nvel_field->getField(1)->fieldNC();
-	UT_VoxelArrayF* g_ovelZ = g_nvel_field->getField(2)->fieldNC();
+	UT_VoxelArrayF* g_ovelX = g_ovel_field->getField(0)->fieldNC();
+	UT_VoxelArrayF* g_ovelY = g_ovel_field->getField(1)->fieldNC();
+	UT_VoxelArrayF* g_ovelZ = g_ovel_field->getField(2)->fieldNC();
 
 	UT_VoxelArrayF* g_active = g_active_field->getField()->fieldNC();
 	
-
+	UT_Vector3 fieldDims(g_nvel_field->getDivisions());
 	//TODO: should we reset grid here, or in a separate node?
 	//		we're resizing the grid separately, so we could just do the reset after that...
 	
@@ -217,6 +214,7 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 	int point_count = gdp_out->getPointRange().getEntries();
 	int weight_count = 64;
 	double p_w[point_count][weight_count];
+	
 	// UT_Vector3 p_wgh[point_count][64]; // Doesn't work with C99
 	
 	std::vector<std::vector<UT_Vector3> > p_wgh;
@@ -246,28 +244,28 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 
 			for (int idx=0, z=p_gridz-1, z_end=z+3; z<=z_end; z++){
 				//Z-dimension interpolation
-				float z_pos = z-p_gridz,
+				float z_pos = p_gridz-z,
 					wz = SIM_SnowSolver::bspline(z_pos),
 					dz = SIM_SnowSolver::bsplineSlope(z_pos);
 
 				for (int y=p_gridy-1, y_end=y+3; y<=y_end; y++){
 					//Y-dimension interpolation
-					float y_pos = y-p_gridy,
+					float y_pos = p_gridy-y,
 						wy = SIM_SnowSolver::bspline(y_pos),
 						dy = SIM_SnowSolver::bsplineSlope(y_pos);
 					for (int x=p_gridx-1, x_end=x+3; x<=x_end; x++, idx++){
 						//X-dimension interpolation
-						float x_pos = x-p_gridx,
+						float x_pos = p_gridx-x,
 							wx = SIM_SnowSolver::bspline(x_pos),
 							dx = SIM_SnowSolver::bsplineSlope(x_pos);
 						
 						//Final weight is dyadic product of weights in each dimension
-						float weight = wx*wy;
+						float weight = wx*wy*wz;
 						p_w[it.getOffset()-1][idx] = weight;
 
 						//Weight gradient is a vector of partial derivatives
-						const UT_Vector3 newWeight(UT_Vector3(dx*wx, dy*wy, dz*wz));		 
-						p_wgh[it.getOffset()-1][idx] = newWeight;
+						const UT_Vector3 newWeight(UT_Vector3(dx*wy*wz, wx*dy*wz, wx*wy*dz));		 
+						p_wgh[it.getOffset()-1][idx] = newWeight/division_size;//Always use cubed voxels??
 
 						//Interpolate mass
 					    float node_mass = g_mass->getValue(x,y,z);
@@ -328,14 +326,29 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 				for (int x=p_gridx-1, x_end=x+3; x<=x_end; x++, idx++){
 					float w = p_w[it.getOffset()-1][idx];
 					if (w > BSPLINE_EPSILON){
-						float massVal = w*(particle_mass / g_mass->getValue(x,y,z));
-						float nodex_vel = g_nvelX->getValue(x,y,z) + (vel[0]*massVal);
-					    float nodey_vel = g_nvelY->getValue(x,y,z) + (vel[1]*massVal);
-					    float nodez_vel = g_nvelZ->getValue(x,y,z) + (vel[2]*massVal);
-						g_nvelX->setValue(x,y,z,nodex_vel);
-						g_nvelY->setValue(x,y,z,nodey_vel);
-						g_nvelZ->setValue(x,y,z,nodez_vel);						
+						float massVal = w*particle_mass;
+						float nodex_vel = g_ovelX->getValue(x,y,z) + (vel[0]*massVal);
+					    float nodey_vel = g_ovelY->getValue(x,y,z) + (vel[1]*massVal);
+					    float nodez_vel = g_ovelZ->getValue(x,y,z) + (vel[2]*massVal);
+						g_ovelX->setValue(x,y,z,nodex_vel);
+						g_ovelY->setValue(x,y,z,nodey_vel);
+						g_ovelZ->setValue(x,y,z,nodez_vel);			
+						g_active->setValue(x,y,z,1.0);			
 					}
+				}
+			}
+		}
+	}
+
+	for(int iX=0; iX < fieldDims[0]; iX++){
+		for(int iY=0; iY < fieldDims[1]; iY++){
+			for(int iZ=0; iZ < fieldDims[2]; iZ++){
+				float node_active = g_active->getValue(iX,iY,iZ);
+				if(node_active == 1.0){
+					float node_mass = g_mass->getValue(iX,iY,iZ);
+					g_ovelX->setValue(iX,iY,iZ,(g_ovelX->getValue(iX,iY,iZ)/node_mass));
+					g_ovelY->setValue(iX,iY,iZ,(g_ovelY->getValue(iX,iY,iZ)/node_mass));
+					g_ovelZ->setValue(iX,iY,iZ,(g_ovelZ->getValue(iX,iY,iZ)/node_mass));
 				}
 			}
 		}
@@ -343,7 +356,124 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 	//Collision detection!! ! ! ! !
 
 	/// STEP #4: Compute new grid velocities
+
+	/*
+	int num = 0;
+	UT_VectorF svd_e(1,3);//Plasticity stuff!?!?!
+	UT_MatrixF svd_w(1,3,1,3);//Plasticity stuff!?!?!
+	UT_MatrixF svd_v(1,3,1,3);//Plasticity stuff!?!?!
+	UT_Matrix3 energy;
+	UT_MatrixSolverF solver;
+	svd_w.makeIdentity();
+	svd_v.makeIdentity();
+	svd_e(0) = 1;
+	svd_e(1) = 1;
+	svd_e(2) = 1;
+	svd_w(1,2) = .5;
+	svd_w(2,3) = 1.7;
+	svd_w(3,1) = 3.8;
 	
+	if(!solver.SVDDecomp(svd_w,svd_e,svd_v, 100)){
+		cout << "NOOOO" << endl;
+	}
+	cout << svd_e << endl;
+	for (GA_Iterator it(gdp_in->getPointRange()); !it.atEnd(); it.advance()) //Iterate through particles
+	{
+		//Apply plasticity here!
+		const UT_Vector3 pos(p_position.get(it.getOffset())); //Particle position pos
+		const UT_Vector3 vel(p_vel.get(it.getOffset())); //Particle velocity vel
+		//const UT_Matrix3 energy(p_energy.get(it.getOffset()));
+		const float volume(p_volume.get(it.getOffset()));
+		
+		int p_gridx = 0;
+		int p_gridy = 0;
+		int p_gridz = 0;
+		g_nvel_field->posToIndex(0,pos,p_gridx,p_gridy,p_gridz); //Get grid position
+
+		//Calculating energy!!!!
+		const UT_Matrix3 def_plastic(p_Fp.get(it.getOffset()));
+		const UT_Matrix3 def_elastic(p_Fe.get(it.getOffset()));
+		
+		//SVD		
+		svd_w.setSubmatrix3(1, 1, def_elastic);
+		if(!solver.SVDDecomp(svd_w,svd_e,svd_v)){
+			svd_w.makeIdentity();
+			svd_v.makeIdentity();
+			svd_e(0) = 1;
+			svd_e(1) = 1;
+			svd_e(2) = 1;
+			cout << "Warning - check step 4" << endl;
+		}
+		for (int i=0; i<3; i++){
+			if (svd_e(i) < CRIT_COMPRESS)
+				svd_e(i) = CRIT_COMPRESS;
+			else if (svd_e(i) > CRIT_STRETCH)
+				svd_e(i) = CRIT_STRETCH;
+		}
+		
+		
+		
+
+		///////////
+		float harden = exp(HARDENING*(1-def_plastic.determinant()));
+		float Je = (svd_e[0])*(svd_e[1])*(svd_e[2]);
+	
+		UT_Matrix3 svd_mult = (svd_w*svd_v);
+		svd_mult.transpose();
+		def_elastic.transpose();
+		temp = 2*mu*(def_elastic - (svd_mult*def_elastic));
+
+		float addToDiag = lambda*Je*(Je-1);
+		temp[0] += addToDiag;
+		temp[4] += addToDiag;
+		temp[8] += addToDiag;
+		UT_Matrix3 energy = volume * harden * temp;
+		///
+		
+		for (int idx=0, z=p_gridz-1, z_end=z+3; z<=z_end; z++){
+			for (int y=p_gridy-1, y_end=y+3; y<=y_end; y++){
+				for (int x=p_gridx-1, x_end=x+3; x<=x_end; x++, idx++){
+					float w = p_w[it.getOffset()-1][idx];
+					if (w > BSPLINE_EPSILON){
+						UT_Vector3 ngrad = p_wgh[it.getOffset()-1][idx];
+						g_nvelX->setValue(x,y,z,g_nvelX->getValue(x,y,z) + ngrad.dot(energy[0]));
+						g_nvelY->setValue(x,y,z,g_nvelY->getValue(x,y,z) + ngrad.dot(energy[1]));
+						g_nvelZ->setValue(x,y,z,g_nvelZ->getValue(x,y,z) + ngrad.dot(energy[2]));						
+					}
+				}
+			}
+		}
+		num++;
+	}
+	
+	int node = 0;
+	for(int iX=0; iX < fieldDims[0]; iX++){
+		for(int iY=0; iY < fieldDims[1]; iY++){
+			for(int iZ=0; iZ < fieldDims[2]; iZ++){
+				
+				float node_active = g_active->getValue(iX,iY,iZ);
+				if(node_active){
+					float nodex_ovel = g_ovelX->getValue(iX,iY,iZ);
+					float nodey_ovel = g_ovelY->getValue(iX,iY,iZ);
+					float nodez_ovel = g_ovelZ->getValue(iX,iY,iZ);
+					float nodex_nvel = g_nvelX->getValue(iX,iY,iZ);
+					float nodey_nvel = g_nvelY->getValue(iX,iY,iZ);
+					float nodez_nvel = g_nvelZ->getValue(iX,iY,iZ);
+					float node_mass = g_mass->getValue(iX,iY,iZ);
+
+					nodex_ovel += timestep*(GRAVITY[0] - (nodex_nvel/node_mass)); 
+					nodey_ovel += timestep*(GRAVITY[1] - (nodey_nvel/node_mass)); 
+					nodez_ovel += timestep*(GRAVITY[2] - (nodez_nvel/node_mass)); 
+					
+					g_nvelX->setValue(iX,iY,iZ,nodex_ovel);
+					g_nvelY->setValue(iX,iY,iZ,nodey_ovel);
+					g_nvelZ->setValue(iX,iY,iZ,nodez_ovel);
+				}
+				node++;
+			}
+		}
+	}
+	*/
 	/// STEP #5: Grid collision resolution
 	
 	/// STEP #6: Transfer grid velocities to particles and integrate

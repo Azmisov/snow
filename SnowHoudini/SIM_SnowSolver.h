@@ -4,9 +4,17 @@
 #include <GAS/GAS_SubSolver.h>
 #include <GAS/GAS_Utils.h>
 #include <math.h>
- 
-const float BSPLINE_EPSILON = 1e-4;
-const float TWO_THIRDS = 2/3.0;
+
+static const float 
+				BSPLINE_EPSILON = 1e-4,
+				TWO_THIRDS = 2/3.0,
+				YOUNGS_MODULUS = 2.0,		//Young's modulus (springiness) (1.4e5)
+				POISSONS_RATIO = .3,		//Poisson's ratio (transverse/axial strain ratio) (.2)
+				CRIT_COMPRESS = 1-2.4e-2,	//Fracture threshold for compression (1-2.5e-2)
+				CRIT_STRETCH = 1+7.5e-3,	//Fracture threshold for stretching (1+7.5e-3)
+				HARDENING = 5.0;		//How much plastic deformation strengthens material (10)
+
+static const UT_Vector3 GRAVITY(0.0,-1.0,0.0);
 
 class SIM_SnowSolver : public GAS_SubSolver{
 public:
@@ -34,9 +42,9 @@ private:
 		x = fabs(x);
 		float w;
 		if (x < 1)
-			w = x*x*(x/2 - 1) + TWO_THIRDS;
+			w = x*x*(x/2 - 1) + 2/3.0;
 		else if (x < 2)
-			w = x*(x*(-x/6 + 1) - 2) + 2*TWO_THIRDS;
+			w = x*(x*(-x/6 + 1) - 2) + 4/3.0;
 		else return 0;
 		//Clamp between 0 and 1... if needed
 		if (w < BSPLINE_EPSILON) return 0;
