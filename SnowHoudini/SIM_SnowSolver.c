@@ -18,6 +18,7 @@
 #include <SIM/SIM_Object.h>
 #include <SIM/SIM_GeometryCopy.h>
 #include <GAS/GAS_SubSolver.h>
+#include "Eigen/Dense"
 
 #include <iostream>
 #include <stdio.h>
@@ -356,80 +357,55 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 	//Collision detection!! ! ! ! !
 
 	/// STEP #4: Compute new grid velocities
-
-	/*
-	int num = 0;
-	UT_VectorF svd_e(1,3);//Plasticity stuff!?!?!
-	UT_MatrixF svd_w(1,3,1,3);//Plasticity stuff!?!?!
-	UT_MatrixF svd_v(1,3,1,3);//Plasticity stuff!?!?!
-	UT_Matrix3 energy;
-	UT_MatrixSolverF solver;
-	svd_w.makeIdentity();
-	svd_v.makeIdentity();
-	svd_e(0) = 1;
-	svd_e(1) = 1;
-	svd_e(2) = 1;
-	svd_w(1,2) = .5;
-	svd_w(2,3) = 1.7;
-	svd_w(3,1) = 3.8;
 	
-	if(!solver.SVDDecomp(svd_w,svd_e,svd_v, 100)){
-		cout << "NOOOO" << endl;
-	}
-	cout << svd_e << endl;
+	//Temporary variables for plasticity and force calculation
+	//We need one set of variables for each thread that will be running
+	Eigen::Matrix3f def_elastic, def_plastic, energy, svd_u, svd_v;
+	Eigen::JacobiSVD<Eigen::Matrix3f, Eigen::NoQRPreconditioner> svd;
+	Eigen::Vector3f svd_e;
+		
 	for (GA_Iterator it(gdp_in->getPointRange()); !it.atEnd(); it.advance()) //Iterate through particles
 	{
-		//Apply plasticity here!
-		const UT_Vector3 pos(p_position.get(it.getOffset())); //Particle position pos
-		const UT_Vector3 vel(p_vel.get(it.getOffset())); //Particle velocity vel
-		//const UT_Matrix3 energy(p_energy.get(it.getOffset()));
+		const UT_Vector3 pos(p_position.get(it.getOffset()));
+		const UT_Vector3 vel(p_vel.get(it.getOffset()));
+		const UT_Matrix3 HDK_def_plastic(p_Fp.get(it.getOffset()));
+		const UT_Matrix3 HDK_def_elastic(p_Fe.get(it.getOffset()));
 		const float volume(p_volume.get(it.getOffset()));
 		
-		int p_gridx = 0;
-		int p_gridy = 0;
-		int p_gridz = 0;
-		g_nvel_field->posToIndex(0,pos,p_gridx,p_gridy,p_gridz); //Get grid position
-
-		//Calculating energy!!!!
-		const UT_Matrix3 def_plastic(p_Fp.get(it.getOffset()));
-		const UT_Matrix3 def_elastic(p_Fe.get(it.getOffset()));
+		//Apply plasticity to deformation gradient, before computing forces
+		//We need to use the Eigen lib to do the SVD; transfer houdini matrices to Eigen matrices
 		
-		//SVD		
-		svd_w.setSubmatrix3(1, 1, def_elastic);
-		if(!solver.SVDDecomp(svd_w,svd_e,svd_v)){
-			svd_w.makeIdentity();
-			svd_v.makeIdentity();
-			svd_e(0) = 1;
-			svd_e(1) = 1;
-			svd_e(2) = 1;
-			cout << "Warning - check step 4" << endl;
-		}
+		//TODO: convert houdini matrix to Eigen matrix
+		
+		//Compute singular value decomposition (uev*)
+		svd.compute(def_elastic, Eigen::ComputeFullV | Eigen::ComputeFullU);
+		svd_e = svd.singularValues();
+		svd_u = svd.matrixU();
+		svd_v = svd.matrixV();
+		//Clamp singular values
 		for (int i=0; i<3; i++){
-			if (svd_e(i) < CRIT_COMPRESS)
-				svd_e(i) = CRIT_COMPRESS;
-			else if (svd_e(i) > CRIT_STRETCH)
-				svd_e(i) = CRIT_STRETCH;
-		}
+			if (svd_e[i] < CRIT_COMPRESS)
+				svd_e[i] = CRIT_COMPRESS;
+			else if (svd_e[i] > CRIT_STRETCH)
+				svd_e[i] = CRIT_STRETCH;
+	 	}
+		//Put SVD back together for new elastic and plastic gradients
+		def_plastic = svd_v * svd_e.asDiagonal().inverse() * svd_u.transpose() * def_elastic * def_plastic;
+		svd_v.transposeInPlace();
+		def_elastic = svd_u * svd_e.asDiagonal() * svd_v;
 		
+		//Now compute the energy partial derivative (which we use to get force at each grid node)
+		energy = 2*mu*(def_elastic - svd_u*svd_v)*def_elastic.transpose();
+		//Je is the determinant of def_elastic (equivalent to svd_e.prod())
+		float Je = svd_e.prod(), contour = lambda*Je*(Je-1);
+		for (int i=0; i<3; i++)
+			energy(i,i) += contour;
+		energy *= volume * exp(HARDENING*(1-def_plastic.determinant()));
 		
-		
-
-		///////////
-		float harden = exp(HARDENING*(1-def_plastic.determinant()));
-		float Je = (svd_e[0])*(svd_e[1])*(svd_e[2]);
-	
-		UT_Matrix3 svd_mult = (svd_w*svd_v);
-		svd_mult.transpose();
-		def_elastic.transpose();
-		temp = 2*mu*(def_elastic - (svd_mult*def_elastic));
-
-		float addToDiag = lambda*Je*(Je-1);
-		temp[0] += addToDiag;
-		temp[4] += addToDiag;
-		temp[8] += addToDiag;
-		UT_Matrix3 energy = volume * harden * temp;
-		///
-		
+		/*
+		//Transfer energy to surrounding grid nodes
+		int p_gridx = 0, p_gridy = 0, p_gridz = 0;
+		g_nvel_field->posToIndex(0,pos,p_gridx,p_gridy,p_gridz);
 		for (int idx=0, z=p_gridz-1, z_end=z+3; z<=z_end; z++){
 			for (int y=p_gridy-1, y_end=y+3; y<=y_end; y++){
 				for (int x=p_gridx-1, x_end=x+3; x<=x_end; x++, idx++){
@@ -444,6 +420,7 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 			}
 		}
 		num++;
+		*/
 	}
 	
 	int node = 0;
@@ -473,7 +450,8 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 			}
 		}
 	}
-	*/
+	
+	//*/
 	/// STEP #5: Grid collision resolution
 	
 	/// STEP #6: Transfer grid velocities to particles and integrate

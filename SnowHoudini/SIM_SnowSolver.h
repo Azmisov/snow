@@ -52,7 +52,7 @@ private:
 	}
 
 	static float bsplineSlope(float x){
-		float abs_x = fabs(x), w;
+		float abs_x = fabs(x);
 		if (abs_x < 1)
 			return 1.5*x*abs_x - 2*x;
 		else if (x < 2)
