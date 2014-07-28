@@ -363,19 +363,27 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 	Eigen::Matrix3f def_elastic, def_plastic, energy, svd_u, svd_v;
 	Eigen::JacobiSVD<Eigen::Matrix3f, Eigen::NoQRPreconditioner> svd;
 	Eigen::Vector3f svd_e;
+	UT_Matrix3  HDK_def_plastic, HDK_def_elastic, HDK_energy;
+	float* data_dp = HDK_def_plastic.data();
+	float* data_de = HDK_def_elastic.data();
+	float* data_energy = HDK_energy.data();
+	//Map Eigen matrices to HDK matrices
+	Eigen::Map<Eigen::Matrix3f> data_dp_map(data_dp);
+	Eigen::Map<Eigen::Matrix3f> data_de_map(data_de);
+	Eigen::Map<Eigen::Matrix3f> data_energy_map(data_energy);	
 		
 	for (GA_Iterator it(gdp_in->getPointRange()); !it.atEnd(); it.advance()) //Iterate through particles
 	{
 		const UT_Vector3 pos(p_position.get(it.getOffset()));
 		const UT_Vector3 vel(p_vel.get(it.getOffset()));
-		const UT_Matrix3 HDK_def_plastic(p_Fp.get(it.getOffset()));
-		const UT_Matrix3 HDK_def_elastic(p_Fe.get(it.getOffset()));
-		const float volume(p_volume.get(it.getOffset()));
+		float volume(p_volume.get(it.getOffset()));
 		
 		//Apply plasticity to deformation gradient, before computing forces
 		//We need to use the Eigen lib to do the SVD; transfer houdini matrices to Eigen matrices
-		
-		//TODO: convert houdini matrix to Eigen matrix
+		HDK_def_plastic = p_Fp.get(it.getOffset());
+		HDK_def_elastic = p_Fe.get(it.getOffset());
+		def_plastic = Eigen::Map<Eigen::Matrix3f>(data_dp);
+		def_elastic = Eigen::Map<Eigen::Matrix3f>(data_de);
 		
 		//Compute singular value decomposition (uev*)
 		svd.compute(def_elastic, Eigen::ComputeFullV | Eigen::ComputeFullU);
@@ -402,7 +410,11 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 			energy(i,i) += contour;
 		energy *= volume * exp(HARDENING*(1-def_plastic.determinant()));
 		
-		/*
+		//Transfer Eigen matrices back to HDK
+		data_dp_map = def_plastic;
+		data_de_map = def_elastic;
+		data_energy_map = energy;
+
 		//Transfer energy to surrounding grid nodes
 		int p_gridx = 0, p_gridy = 0, p_gridz = 0;
 		g_nvel_field->posToIndex(0,pos,p_gridx,p_gridy,p_gridz);
@@ -412,15 +424,13 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 					float w = p_w[it.getOffset()-1][idx];
 					if (w > BSPLINE_EPSILON){
 						UT_Vector3 ngrad = p_wgh[it.getOffset()-1][idx];
-						g_nvelX->setValue(x,y,z,g_nvelX->getValue(x,y,z) + ngrad.dot(energy[0]));
-						g_nvelY->setValue(x,y,z,g_nvelY->getValue(x,y,z) + ngrad.dot(energy[1]));
-						g_nvelZ->setValue(x,y,z,g_nvelZ->getValue(x,y,z) + ngrad.dot(energy[2]));						
+						g_nvelX->setValue(x,y,z,g_nvelX->getValue(x,y,z) + ngrad.dot(HDK_energy[0]));
+						g_nvelY->setValue(x,y,z,g_nvelY->getValue(x,y,z) + ngrad.dot(HDK_energy[1]));
+						g_nvelZ->setValue(x,y,z,g_nvelZ->getValue(x,y,z) + ngrad.dot(HDK_energy[2]));						
 					}
 				}
 			}
 		}
-		num++;
-		*/
 	}
 	
 	int node = 0;
