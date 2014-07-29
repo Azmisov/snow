@@ -6,15 +6,14 @@
 #include <math.h>
 
 static const float 
-				BSPLINE_EPSILON = 1e-4,
-				TWO_THIRDS = 2/3.0,
-				YOUNGS_MODULUS = 2.0,		//Young's modulus (springiness) (1.4e5)
-				POISSONS_RATIO = .3,		//Poisson's ratio (transverse/axial strain ratio) (.2)
-				CRIT_COMPRESS = 1-2.4e-2,	//Fracture threshold for compression (1-2.5e-2)
-				CRIT_STRETCH = 1+7.5e-3,	//Fracture threshold for stretching (1+7.5e-3)
-				FLIP_PERCENT = .95,			//Weight to give FLIP update over PIC (.95)
-				HARDENING = 5.0;		//How much plastic deformation strengthens material (10)
-
+	BSPLINE_EPSILON = 1e-4,
+	YOUNGS_MODULUS = 2.0,		//Young's modulus (springiness) (1.4e5)
+	POISSONS_RATIO = .3,		//Poisson's ratio (transverse/axial strain ratio) (.2)
+	CRIT_COMPRESS = 1-2.4e-2,	//Fracture threshold for compression (1-2.5e-2)
+	CRIT_STRETCH = 1+7.5e-3,	//Fracture threshold for stretching (1+7.5e-3)
+	FLIP_PERCENT = .95,			//Weight to give FLIP update over PIC (.95)
+	HARDENING = 8.0,			//How much plastic deformation strengthens material (10)
+	CFL = 1e-6;					//Adaptive timestep adjustment
 
 static const UT_Vector3 GRAVITY(0.0,-1.0,0.0);
 
