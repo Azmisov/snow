@@ -61,6 +61,7 @@ const SIM_DopDescription* SIM_SnowSolver::getDescription(){
 
 	//Grid parameters (eulerian):
 	static PRM_Name g_div("div_size", "Division Size");			//grid division size
+	static PRM_Name g_size("g_size", "Grid Size");				//grid size	
 	static PRM_Name g_mass("g_mass", "Mass Field");				//grid mass
 	static PRM_Name g_nvel("g_nvel", "New Velocity Field");		//grid velocity (after applying forces)
 	static PRM_Name g_ovel("g_ovel", "Old Velocity Field");		//grid velocity (before applying forces)
@@ -81,6 +82,7 @@ const SIM_DopDescription* SIM_SnowSolver::getDescription(){
 		PRM_Template(PRM_STRING, 1, &p_wg),
 		//grid
 		PRM_Template(PRM_FLT_J, 1, &g_div),
+		PRM_Template(PRM_FLT_J, 3, &g_size),	
 		PRM_Template(PRM_STRING, 1, &g_mass),
 		PRM_Template(PRM_STRING, 1, &g_nvel),
 		PRM_Template(PRM_STRING, 1, &g_ovel),
@@ -118,8 +120,8 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 	const GU_Detail* gdp_in = gdh.readLock(); // Must unlock later
 	GU_Detail* gdp_out = gdh.writeLock();
 
-	GA_ROAttributeRef p_ref_position = gdp_in->findPointAttribute("P");
-	GA_ROHandleT<UT_Vector3> p_position(p_ref_position.getAttribute());
+	GA_RWAttributeRef p_ref_position = gdp_out->findPointAttribute("P");
+	GA_RWHandleT<UT_Vector3> p_position(p_ref_position.getAttribute());
 
 	GA_RWAttributeRef p_ref_volume = gdp_out->findPointAttribute("vol");
 	GA_RWHandleT<float> p_volume(p_ref_volume.getAttribute());
@@ -127,14 +129,14 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 	GA_RWAttributeRef p_ref_density = gdp_out->findPointAttribute("density");
 	GA_RWHandleF p_density(p_ref_density.getAttribute());
 
-	GA_ROAttributeRef p_ref_vel = gdp_in->findPointAttribute("vel");
-	GA_ROHandleT<UT_Vector3> p_vel(p_ref_vel.getAttribute());
+	GA_RWAttributeRef p_ref_vel = gdp_out->findPointAttribute("vel");
+	GA_RWHandleT<UT_Vector3> p_vel(p_ref_vel.getAttribute());
 
-	GA_ROAttributeRef p_ref_Fe = gdp_in->findPointAttribute("Fe");
-	GA_ROHandleT<UT_Matrix3> p_Fe(p_ref_Fe.getAttribute());
+	GA_RWAttributeRef p_ref_Fe = gdp_out->findPointAttribute("Fe");
+	GA_RWHandleT<UT_Matrix3> p_Fe(p_ref_Fe.getAttribute());
 
-	GA_ROAttributeRef p_ref_Fp = gdp_in->findPointAttribute("Fp");
-	GA_ROHandleT<UT_Matrix3> p_Fp(p_ref_Fp.getAttribute());
+	GA_RWAttributeRef p_ref_Fp = gdp_out->findPointAttribute("Fp");
+	GA_RWHandleT<UT_Matrix3> p_Fp(p_ref_Fp.getAttribute());
 
 	//EVALUATE PARAMETERS
 	float particle_mass = .01;
@@ -414,6 +416,9 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 		data_dp_map = def_plastic;
 		data_de_map = def_elastic;
 		data_energy_map = energy;
+		
+		p_Fp.set(it.getOffset(),HDK_def_plastic);
+		p_Fe.set(it.getOffset(),HDK_def_elastic);
 
 		//Transfer energy to surrounding grid nodes
 		int p_gridx = 0, p_gridy = 0, p_gridz = 0;
@@ -465,6 +470,62 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 	/// STEP #5: Grid collision resolution
 	
 	/// STEP #6: Transfer grid velocities to particles and integrate
+	
+	UT_Vector3 pic, flip;
+	UT_Matrix3 vel_grad;
+
+	for (GA_Iterator it(gdp_in->getPointRange()); !it.atEnd(); it.advance()) //Iterate through particles
+	{
+		UT_Vector3 pos(p_position.get(it.getOffset())); //Particle position pos
+		
+		pic[0] = 0.0;
+		pic[1] = 0.0;
+		pic[2] = 0.0;
+		flip = p_vel.get(it.getOffset());
+		float density = 0;
+		vel_grad.zero();
+
+		int p_gridx = 0;
+		int p_gridy = 0;
+		int p_gridz = 0;
+		g_nvel_field->posToIndex(0,pos,p_gridx,p_gridy,p_gridz); //Get grid position
+	
+		for (int idx=0, z=p_gridz-1, z_end=z+3; z<=z_end; z++){
+			for (int y=p_gridy-1, y_end=y+3; y<=y_end; y++){
+				for (int x=p_gridx-1, x_end=x+3; x<=x_end; x++, idx++){
+					float w = p_w[it.getOffset()-1][idx];
+					if (w > BSPLINE_EPSILON){
+
+						const UT_Vector3 node_nvel(g_nvelX->getValue(x,y,z),g_nvelY->getValue(x,y,z),g_nvelZ->getValue(x,y,z));
+
+						pic += node_nvel*w;	
+						flip[0] += (node_nvel[0] - g_ovelX->getValue(x,y,z))*w;	
+						flip[1] += (node_nvel[1]- g_ovelY->getValue(x,y,z))*w;	
+						flip[2] += (node_nvel[2] - g_ovelZ->getValue(x,y,z))*w;	
+						density += w * g_mass->getValue(x,y,z);		
+						const UT_Vector3 node_wg = p_wgh[it.getOffset()-1][idx];
+						vel_grad.outerproductUpdate(1.0f, node_nvel,node_wg);
+					}
+				}
+			}
+		}
+		UT_Vector3 vel = flip*FLIP_PERCENT + pic*(1-FLIP_PERCENT);
+		p_vel.set(it.getOffset(),vel);
+		density /= voxelArea;
+		p_density.set(it.getOffset(),density);
+		pos += timestep*vel;
+		p_position.set(it.getOffset(),pos);
+
+		vel_grad *= timestep;
+		vel_grad[0] += 1;
+		vel_grad[4] += 1;
+		vel_grad[8] += 1;
+		if(it.getOffset() == 1){
+			cout << vel_grad << endl;
+		}
+		p_Fe.set(it.getOffset(),vel_grad*p_Fe.get(it.getOffset()));
+	
+	}
 	
 	/// STEP #7: Update particle deformation gradient
 	
