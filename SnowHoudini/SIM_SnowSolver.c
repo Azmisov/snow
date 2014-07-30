@@ -66,6 +66,8 @@ const SIM_DopDescription* SIM_SnowSolver::getDescription(){
 	static PRM_Name g_nvel("g_nvel", "New Velocity Field");		//grid velocity (after applying forces)
 	static PRM_Name g_ovel("g_ovel", "Old Velocity Field");		//grid velocity (before applying forces)
 	static PRM_Name g_active("g_active", "Activated Field");	//boolean field that tells whether there are particles within a radius of 2
+	static PRM_Name g_density("g_density", "Density Field");	//grid density
+
 	
 	//TODO: import collision field
 
@@ -87,6 +89,7 @@ const SIM_DopDescription* SIM_SnowSolver::getDescription(){
 		PRM_Template(PRM_STRING, 1, &g_nvel),
 		PRM_Template(PRM_STRING, 1, &g_ovel),
 		PRM_Template(PRM_STRING, 1, &g_active),
+		PRM_Template(PRM_STRING, 1, &g_density),
 		//what is this for ???
 		PRM_Template()
 	};
@@ -165,9 +168,14 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 	SIM_DataArray g_active_data;
 	getMatchingData(g_active_data, obj, "g_active");	
 	g_active_field = SIM_DATA_CAST(g_active_data[0], SIM_ScalarField);
+
+	SIM_ScalarField *g_density_field;
+	SIM_DataArray g_density_data;
+	getMatchingData(g_density_data, obj, "g_density");	
+	g_density_field = SIM_DATA_CAST(g_density_data[0], SIM_ScalarField);
 	
-	UT_VoxelArrayF *g_nvelX, *g_nvelY, *g_nvelZ, *g_ovelX, *g_ovelY, *g_ovelZ, *g_active, *g_mass;
-	
+	UT_VoxelArrayF *g_nvelX, *g_nvelY, *g_nvelZ, *g_ovelX, *g_ovelY, *g_ovelZ, *g_active, *g_mass, *g_density;
+
 	int point_count = gdp_out->getPointRange().getEntries();
 	int weight_count = 64;
 	float p_w[point_count][weight_count];
@@ -184,7 +192,7 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 
 	//Find initial maximum velocity, for adaptive timestep
 	//Also find initial bounding box of particles
-	float max_vel, adaptive_time = 0;
+	float max_vel = 0, adaptive_time = 0;
 	bool bbox_reset = true;
 	UT_Vector3 bbox_min, bbox_max;
 	for (GA_Iterator it(gdp_in->getPointRange()); !it.atEnd(); it.advance()){
@@ -209,61 +217,20 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 			}
 		}
 	}
+	if (bbox_reset)
+		cout << "This should never happen!!!!!!!" << endl;
 	
 	//Grid dimensions, for resizing
 	UT_Vector3 grid_size, grid_origin, grid_divs;
 	float division_unit = 64.0;
 	float voxelArea = 1/(division_unit*division_unit*division_unit);
 	float division_size = 1/division_unit;
+	bool mapping_density = false;
+	SIM_ScalarField *resized_field = g_mass_field;
 
-	while (adaptive_time < framerate){
-	
-		//Substep progress
-		printf("\b\b\b%02i%%", (int) (100*adaptive_time/framerate));
-		fflush(stdout);
-	
-		//Resize grid
-		grid_origin = (bbox_max+bbox_min)/2.0;	//grid center (to be adjusted to grid origin later)
-		grid_size = bbox_max-bbox_min; //grid size (to be adjusted to grid scale later)
-		grid_size += division_size*5;	//this gives us 2 voxel padding, approximately
-		g_mass_field->resizeKeepData(grid_size, grid_origin, false);
-		g_nvel_field->resizeKeepData(grid_size, grid_origin, false);
-		g_ovel_field->resizeKeepData(grid_size, grid_origin, false);
-		g_active_field->resizeKeepData(grid_size, grid_origin, false);
-		bbox_reset = true;
-		
-		//Pointers may be invalid after resize
-		g_mass = g_mass_field->getField()->fieldNC();
-		g_nvelX = g_nvel_field->getField(0)->fieldNC();
-		g_nvelY = g_nvel_field->getField(1)->fieldNC();
-		g_nvelZ = g_nvel_field->getField(2)->fieldNC();
-		g_ovelX = g_ovel_field->getField(0)->fieldNC();
-		g_ovelY = g_ovel_field->getField(1)->fieldNC();
-		g_ovelZ = g_ovel_field->getField(2)->fieldNC();
-		g_active = g_active_field->getField()->fieldNC();		
-		
-		//Get world-to-grid conversion ratios
-		//Particle's grid position can be found via (pos - grid_origin)/grid_cellsize
-		grid_divs = g_mass_field->getDivisions();
-		grid_origin = g_mass_field->getCenter();
-		grid_origin -= g_mass_field->getSize()/2;
-		
-		//Reset grid
-		for(int iX=0; iX < grid_divs[0]; iX++){
-			for(int iY=0; iY < grid_divs[1]; iY++){
-				for(int iZ=0; iZ < grid_divs[2]; iZ++){
-					g_mass->setValue(iX,iY,iZ,0);
-					g_active->setValue(iX,iY,iZ,0);
-					g_ovelX->setValue(iX,iY,iZ,0);
-					g_ovelY->setValue(iX,iY,iZ,0);
-					g_ovelZ->setValue(iX,iY,iZ,0);
-					g_nvelX->setValue(iX,iY,iZ,0);
-					g_nvelY->setValue(iX,iY,iZ,0);
-					g_nvelZ->setValue(iX,iY,iZ,0);
-				}
-			}
-		}
-		
+	while (1){
+		mapping_density = adaptive_time >= framerate;
+
 		//Compute adaptive timestep
 		if (max_vel > EPSILON)
 			timestep = CFL / (division_unit*sqrt(max_vel));
@@ -272,13 +239,78 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 			timestep = framerate-adaptive_time;
 		adaptive_time += timestep;
 		if (timestep < EPSILON)
-			return true;
+			mapping_density = true;
+
 		/*
 		cout << "Substep: " << endl;
 		cout << "\tTimestep: " << timestep << endl;
 		cout << "\tMaxVel: " << max_vel << endl;
 		//*/
 		max_vel = 0;
+
+		//Get new grid dimensions
+		grid_origin = (bbox_max+bbox_min)/2.0;	//grid center (to be adjusted to grid origin later)
+		grid_size = bbox_max-bbox_min; //grid size (to be adjusted to grid scale later)
+		grid_size += division_size*5;	//this gives us 2 voxel padding, approximately
+		
+		if (!mapping_density){
+			//Substep progress
+			printf("\b\b\b%02i%%", (int) (100*adaptive_time/framerate));
+			fflush(stdout);
+
+			//Resize grid
+			g_mass_field->resizeKeepData(grid_size, grid_origin, false);
+			g_nvel_field->resizeKeepData(grid_size, grid_origin, false);
+			g_ovel_field->resizeKeepData(grid_size, grid_origin, false);
+			g_active_field->resizeKeepData(grid_size, grid_origin, false);
+			bbox_reset = true;
+		
+			//Pointers may be invalid after resize
+			g_mass = g_mass_field->getField()->fieldNC();
+			g_nvelX = g_nvel_field->getField(0)->fieldNC();
+			g_nvelY = g_nvel_field->getField(1)->fieldNC();
+			g_nvelZ = g_nvel_field->getField(2)->fieldNC();
+			g_ovelX = g_ovel_field->getField(0)->fieldNC();
+			g_ovelY = g_ovel_field->getField(1)->fieldNC();
+			g_ovelZ = g_ovel_field->getField(2)->fieldNC();
+			g_active = g_active_field->getField()->fieldNC();
+			grid_divs = g_mass_field->getDivisions();
+
+			//Reset grid
+			for(int iX=0; iX < grid_divs[0]; iX++){
+				for(int iY=0; iY < grid_divs[1]; iY++){
+					for(int iZ=0; iZ < grid_divs[2]; iZ++){
+						g_mass->setValue(iX,iY,iZ,0);
+						g_active->setValue(iX,iY,iZ,0);
+						g_ovelX->setValue(iX,iY,iZ,0);
+						g_ovelY->setValue(iX,iY,iZ,0);
+						g_ovelZ->setValue(iX,iY,iZ,0);
+						g_nvelX->setValue(iX,iY,iZ,0);
+						g_nvelY->setValue(iX,iY,iZ,0);
+						g_nvelZ->setValue(iX,iY,iZ,0);
+					}
+				}
+			}
+		}
+		else{
+			//Resize density field
+			g_density_field->resizeKeepData(grid_size, grid_origin, false);
+			g_density = g_density_field->getField()->fieldNC();
+			grid_divs = g_density_field->getDivisions();
+			for(int iX=0; iX < grid_divs[0]; iX++){
+				for(int iY=0; iY < grid_divs[1]; iY++){
+					for(int iZ=0; iZ < grid_divs[2]; iZ++){
+						g_density->setValue(iX,iY,iZ,0);
+					}
+				}
+			}
+			resized_field = g_density_field;
+		}
+		
+		//Get world-to-grid conversion ratios
+		//Particle's grid position can be found via (pos - grid_origin)/grid_cellsize
+		grid_origin = resized_field->getCenter();
+		grid_origin -= resized_field->getSize()/2;
 
 		/// STEP #1: Transfer mass to grid
 
@@ -293,8 +325,9 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 				UT_Vector3 gpos = (p_position.get(pid) - grid_origin)*division_unit;
 				gpos -= .5;
 				int p_gridx = 0, p_gridy = 0, p_gridz = 0;
-				g_nvel_field->posToIndex(0,p_position.get(pid),p_gridx,p_gridy,p_gridz);
+				resized_field->posToIndex(p_position.get(pid),p_gridx,p_gridy,p_gridz);
 				
+				float particle_density = p_density.get(pid);
 				//Compute weights and transfer mass
 				for (int idx=0, z=p_gridz-1, z_end=z+3; z<=z_end; z++){
 					//Z-dimension interpolation
@@ -316,17 +349,23 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 							float weight = wx*wy*wz;
 							p_w[pid-1][idx] = weight;
 
-							//Weight gradient is a vector of partial derivatives
-							p_wgh[pid-1][idx] = UT_Vector3(dx*wy*wz, wx*dy*wz, wx*wy*dz);
-							//TODO: this next line may not be needed...
-							p_wgh[pid-1][idx] *= division_unit;
+							if (!mapping_density){
+								//Weight gradient is a vector of partial derivatives
+								p_wgh[pid-1][idx] = UT_Vector3(dx*wy*wz, wx*dy*wz, wx*wy*dz);
+								//TODO: this next line may not be needed...
+								p_wgh[pid-1][idx] *= division_unit;
 
 						
-							//Interpolate mass
-							float node_mass = g_mass->getValue(x,y,z);
-							node_mass += weight*particle_mass;
+								//Interpolate mass
+								float node_mass = g_mass->getValue(x,y,z);
+								node_mass += weight*particle_mass;
 							
-							g_mass->setValue(x,y,z,node_mass);
+								g_mass->setValue(x,y,z,node_mass);
+							}
+							else{
+								float density = particle_density*weight*g_density->getValue(x,y,z);
+								g_density->setValue(x,y,z,density);
+							}
 						}
 					}
 				}
@@ -336,6 +375,9 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 				//p_wgh.set(it.getOffset(), weight_gradients);
 			}
 		}
+
+		//Exit early
+		if (mapping_density) return true;
 
 		/// STEP #2: First timestep only - Estimate particle volumes using grid mass
 
@@ -361,10 +403,10 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 					}
 				}
 				
-				density *= voxelArea;
-				*/
+				density /= voxelArea;
+				//*/
 				p_density.set(pid,density);
-				p_volume.set(pid, particle_mass/density);
+				p_volume.set(pid, particle_mass);
 			}
 		}
 
@@ -482,10 +524,15 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 			//Now compute the energy partial derivative (which we use to get force at each grid node)
 			energy = 2*mu*(def_elastic - svd_u*svd_v)*def_elastic.transpose();
 			//Je is the determinant of def_elastic (equivalent to svd_e.prod())
-			float Je = svd_e.prod(), contour = lambda*Je*(Je-1);
+			float Je = svd_e.prod(),
+				contour = lambda*Je*(Je-1),
+				jp = def_plastic.determinant(),
+				particle_vol = p_volume.get(pid);
 			for (int i=0; i<3; i++)
 				energy(i,i) += contour;
-			energy *= p_volume.get(pid) * exp(HARDENING*(1-def_plastic.determinant()));
+			energy *=  particle_vol * exp(HARDENING*(1-jp));
+			//p_density.set(pid,1/jp);
+		
 			
 			//Transfer Eigen matrices back to HDK
 			data_dp_map = def_plastic;
@@ -577,7 +624,7 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 			pic[2] = 0.0;
 			flip = p_vel.get(pid);
 			vel_grad.zero();
-			float density = 0;
+			//float density = 0;
 
 			 //Get grid position
 			int p_gridx = 0, p_gridy = 0, p_gridz = 0;
@@ -602,7 +649,7 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 							flip[1] += (node_nvel[1]- g_ovelY->getValue(x,y,z))*w;	
 							flip[2] += (node_nvel[2] - g_ovelZ->getValue(x,y,z))*w;
 							//Transfer density
-							density += w * g_mass->getValue(x,y,z);
+							//density += w * g_mass->getValue(x,y,z);
 							//Transfer veloctiy gradient
 							vel_grad.outerproductUpdate(1.0f, node_nvel, node_wg);
 						}
@@ -614,8 +661,8 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 			UT_Vector3 vel = flip*FLIP_PERCENT + pic*(1-FLIP_PERCENT);
 
 			//Finalize density update
-			density *= voxelArea;
-			p_density.set(pid,density);
+			//density *= voxelArea;
+			//p_density.set(pid,density);
 
 			//Update particle position
 			pos += timestep*vel;
