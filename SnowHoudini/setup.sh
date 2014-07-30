@@ -1,6 +1,6 @@
 #!/bin/bash
 
-HFS=/opt/hfs*
+HFS=/opt/hfs13*
 if [ -z "${HFS}" ]
 then
 	export HFS=$HFS

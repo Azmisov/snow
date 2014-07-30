@@ -6,14 +6,17 @@
 #include <math.h>
 
 static const float 
-	BSPLINE_EPSILON = 1e-4,
+	EPSILON = 1e-5,
 	YOUNGS_MODULUS = 1.4,		//Young's modulus (springiness) (1.4e5)
 	POISSONS_RATIO = .2,		//Poisson's ratio (transverse/axial strain ratio) (.2)
 	CRIT_COMPRESS = 1-2.5e-2,	//Fracture threshold for compression (1-2.5e-2)
 	CRIT_STRETCH = 1+7.5e-3,	//Fracture threshold for stretching (1+7.5e-3)
 	FLIP_PERCENT = .95,			//Weight to give FLIP update over PIC (.95)
 	HARDENING = 10.0,			//How much plastic deformation strengthens material (10)
-	CFL = 5e-3;					//Adaptive timestep adjustment
+	CFL = .05;					//Adaptive timestep adjustment
+
+static const int
+	BSPLINE_RADIUS = 2;			//Radius of B-spline interpolation function
 
 static const UT_Vector3 GRAVITY(0.0,-1.0,0.0);
 
@@ -39,6 +42,7 @@ private:
 	);
     //Description of our sub-solver
     static const SIM_DopDescription *getDescription();
+    
 	static float bspline(float x){
 		x = fabs(x);
 		float w;
@@ -48,10 +52,9 @@ private:
 			w = x*(x*(-x/6 + 1) - 2) + 4/3.0;
 		else return 0;
 		//Clamp between 0 and 1... if needed
-		if (w < BSPLINE_EPSILON) return 0;
+		if (w < EPSILON) return 0;
 		return w;
 	}
-
 	static float bsplineSlope(float x){
 		float abs_x = fabs(x);
 		if (abs_x < 1)
