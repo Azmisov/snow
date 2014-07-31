@@ -363,7 +363,7 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 								g_mass->setValue(x,y,z,node_mass);
 							}
 							else{
-								float density = particle_density*weight*g_density->getValue(x,y,z);
+								float density = particle_density*weight+g_density->getValue(x,y,z);
 								g_density->setValue(x,y,z,density);
 							}
 						}
@@ -385,8 +385,8 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 			//Iterate through particles
 			for (GA_Iterator it(gdp_out->getPointRange()); !it.atEnd(); it.advance()){
 				int pid = it.getOffset();
-				float density = 1;
-				/*
+				float density = 0;
+				//*
 				//Get grid position
 				int p_gridx = 0, p_gridy = 0, p_gridz = 0;
 				g_nvel_field->posToIndex(0,p_position.get(pid),p_gridx,p_gridy,p_gridz);
@@ -624,7 +624,7 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 			pic[2] = 0.0;
 			flip = p_vel.get(pid);
 			vel_grad.zero();
-			//float density = 0;
+			float density = 0;
 
 			 //Get grid position
 			int p_gridx = 0, p_gridy = 0, p_gridz = 0;
@@ -649,7 +649,7 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 							flip[1] += (node_nvel[1]- g_ovelY->getValue(x,y,z))*w;	
 							flip[2] += (node_nvel[2] - g_ovelZ->getValue(x,y,z))*w;
 							//Transfer density
-							//density += w * g_mass->getValue(x,y,z);
+							density += w * g_mass->getValue(x,y,z);
 							//Transfer veloctiy gradient
 							vel_grad.outerproductUpdate(1.0f, node_nvel, node_wg);
 						}
@@ -661,8 +661,8 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 			UT_Vector3 vel = flip*FLIP_PERCENT + pic*(1-FLIP_PERCENT);
 
 			//Finalize density update
-			//density *= voxelArea;
-			//p_density.set(pid,density);
+			density /= voxelArea;
+			p_density.set(pid,density);
 
 			//Update particle position
 			pos += timestep*vel;
