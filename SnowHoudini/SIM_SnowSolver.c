@@ -67,6 +67,9 @@ const SIM_DopDescription* SIM_SnowSolver::getDescription(){
 	static PRM_Name g_ovel("g_ovel", "Old Velocity Field");		//grid velocity (before applying forces)
 	static PRM_Name g_active("g_active", "Activated Field");	//boolean field that tells whether there are particles within a radius of 2
 	static PRM_Name g_density("g_density", "Density Field");	//grid density
+	static PRM_Name g_col("g_col", "Collision Field"); 			// grid collision
+	static PRM_Name g_colVel("g_colVel", "Collision Velocity Field"); 			// grid collision velocity
+	static PRM_Name g_colW("g_colW", "Collision Weights Field"); 			// grid collision weights
 
 	
 	//TODO: import collision field
@@ -90,6 +93,9 @@ const SIM_DopDescription* SIM_SnowSolver::getDescription(){
 		PRM_Template(PRM_STRING, 1, &g_ovel),
 		PRM_Template(PRM_STRING, 1, &g_active),
 		PRM_Template(PRM_STRING, 1, &g_density),
+		PRM_Template(PRM_STRING, 1, &g_col),
+		PRM_Template(PRM_STRING, 1, &g_colVel),
+		PRM_Template(PRM_STRING, 1, &g_colW),
 		//what is this for ???
 		PRM_Template()
 	};
@@ -173,8 +179,24 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 	SIM_DataArray g_density_data;
 	getMatchingData(g_density_data, obj, "g_density");	
 	g_density_field = SIM_DATA_CAST(g_density_data[0], SIM_ScalarField);
+
+	SIM_ScalarField *g_col_field;
+	SIM_DataArray g_col_data;
+	getMatchingData(g_col_data, obj, "g_col");	
+	g_col_field = SIM_DATA_CAST(g_col_data[0], SIM_ScalarField);
+
+	SIM_VectorField *g_colVel_field;
+	SIM_DataArray g_colVel_data;
+	getMatchingData(g_colVel_data, obj, "g_colVel");	
+	g_colVel_field = SIM_DATA_CAST(g_colVel_data[0], SIM_VectorField);
+
+	SIM_VectorField *g_colW_field;
+	SIM_DataArray g_colW_data;
+	getMatchingData(g_colW_data, obj, "g_colW");	
+	g_colW_field = SIM_DATA_CAST(g_colW_data[0], SIM_VectorField);
 	
-	UT_VoxelArrayF *g_nvelX, *g_nvelY, *g_nvelZ, *g_ovelX, *g_ovelY, *g_ovelZ, *g_active, *g_mass, *g_density;
+	UT_VoxelArrayF *g_nvelX, *g_nvelY, *g_nvelZ, *g_ovelX, *g_ovelY, *g_ovelZ, *g_active, *g_mass, *g_density,
+			*g_col, *g_colVelX, *g_colVelY, *g_colVelZ, *g_colWX, *g_colWY, *g_colWZ;
 
 	int point_count = gdp_out->getPointRange().getEntries();
 	int weight_count = 64;
@@ -263,6 +285,10 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 			g_nvel_field->resizeKeepData(grid_size, grid_origin, false);
 			g_ovel_field->resizeKeepData(grid_size, grid_origin, false);
 			g_active_field->resizeKeepData(grid_size, grid_origin, false);
+			//*
+			g_col_field->resizeKeepData(grid_size, grid_origin, false);
+			g_colVel_field->resizeKeepData(grid_size, grid_origin, false);
+			g_colW_field->resizeKeepData(grid_size, grid_origin, false);//*/
 			bbox_reset = true;
 		
 			//Pointers may be invalid after resize
@@ -273,6 +299,14 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 			g_ovelX = g_ovel_field->getField(0)->fieldNC();
 			g_ovelY = g_ovel_field->getField(1)->fieldNC();
 			g_ovelZ = g_ovel_field->getField(2)->fieldNC();
+			//*
+			g_colVelX = g_colVel_field->getField(0)->fieldNC();
+			g_colVelY = g_colVel_field->getField(1)->fieldNC();
+			g_colVelZ = g_colVel_field->getField(2)->fieldNC();
+			g_colWX = g_colW_field->getField(0)->fieldNC();
+			g_colWY = g_colW_field->getField(1)->fieldNC();
+			g_colWZ = g_colW_field->getField(2)->fieldNC();
+			g_col = g_col_field->getField()->fieldNC();//*/
 			g_active = g_active_field->getField()->fieldNC();
 			grid_divs = g_mass_field->getDivisions();
 
@@ -288,6 +322,14 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 						g_nvelX->setValue(iX,iY,iZ,0);
 						g_nvelY->setValue(iX,iY,iZ,0);
 						g_nvelZ->setValue(iX,iY,iZ,0);
+						//*
+						g_colVelX->setValue(iX,iY,iZ,0);
+						g_colVelY->setValue(iX,iY,iZ,0);
+						g_colVelZ->setValue(iX,iY,iZ,0);
+						g_colWX->setValue(iX,iY,iZ,0);
+						g_colWY->setValue(iX,iY,iZ,0);
+						g_colWZ->setValue(iX,iY,iZ,0);	
+						g_col->setValue(iX,iY,iZ,0);//*/					
 					}
 				}
 			}
