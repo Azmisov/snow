@@ -535,7 +535,7 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 		for(int iX=0; iX < grid_divs[0]; iX++){
 			for(int iY=0; iY < grid_divs[1]; iY++){
 				for(int iZ=0; iZ < grid_divs[2]; iZ++){	
-					float collisionVal = g_col->getValue(iX,iY,iZ);	
+					//float collisionVal = g_col->getValue(iX,iY,iZ);	
 					float wxN = g_colWX->getValue(iX,iY,iZ);
 					float wxP = g_colWX->getValue(iX+1,iY,iZ);
 					float wyN = g_colWY->getValue(iX,iY,iZ);
@@ -543,44 +543,46 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 					float wzN = g_colWZ->getValue(iX,iY,iZ);
 					float wzP = g_colWZ->getValue(iX,iY,iZ+1);
 
-					UT_Vector3 n (wxP - wxN, wyP - wyN, wzP - wzN);
-					
+					if ( (wxN < 1 || wxP < 1 || wyN < 1 || wyP < 1 || wzN < 1 || wzP < 1) &&
+										        !(wxN==0 && wxP==0 && wyN==0 && wyP==0 && wzN==0 && wzP==0) ){
 
-					if(n.length() == 0) continue;
-					n.normalize();
-					UT_Vector3 vco(g_colVelX->getValue(iX,iY,iZ),
-						g_colVelY->getValue(iX,iY,iZ),
-						g_colVelZ->getValue(iX,iY,iZ));
-					//vco *= collision_vel_scale;
-					UT_Vector3 v(g_nvelX->getValue(iX,iY,iZ),
-						g_nvelY->getValue(iX,iY,iZ),
-						g_nvelZ->getValue(iX,iY,iZ));
-					
-					UT_Vector3 vrel = v - vco;
-					float vn = vrel.dot(n);
-					if(vn >= 0){
-						//Bodies are separating
-						continue;
-					}
-					UT_Vector3 vt = vrel - (n*vn);
-					UT_Vector3 cvRel;
-					float vtNorm = vt.length();
-					if(vtNorm <= -1*COF*vn){
-						//Sticks
-						cvRel[0] = 0;
-						cvRel[1] = 0;
-						cvRel[2] = 0;
+						UT_Vector3 n (wxP - wxN, wyP - wyN, wzP - wzN);
+						n.normalize();
+						UT_Vector3 vco(g_colVelX->getValue(iX,iY,iZ),
+							g_colVelY->getValue(iX,iY,iZ),
+							g_colVelZ->getValue(iX,iY,iZ));
 
+						UT_Vector3 v(g_nvelX->getValue(iX,iY,iZ),
+							g_nvelY->getValue(iX,iY,iZ),
+							g_nvelZ->getValue(iX,iY,iZ));
+					
+						UT_Vector3 vrel = v - vco;
+						float vn = vrel.dot(n);
+						if(vn >= 0){
+							//Bodies are separating
+							continue;
+						}
+						UT_Vector3 vt = vrel - (n*vn);
+						UT_Vector3 cvRel;
+						float vtNorm = vt.length();
+						if(vtNorm <= -1*COF*vn){
+							//Sticks
+							cvRel[0] = 0;
+							cvRel[1] = 0;
+							cvRel[2] = 0;
+
+						}
+						else{
+							cvRel = vt + COF*vn*vt/vtNorm;
+						}									
+						UT_Vector3 cv = cvRel + vco;
+						g_nvelX->setValue(iX,iY,iZ,cv[0]);	
+						g_nvelY->setValue(iX,iY,iZ,cv[1]);
+						g_nvelZ->setValue(iX,iY,iZ,cv[2]);
+					
+					
 					}
-					else{
-						cvRel = vt + COF*vn*vt/vtNorm;
-					}									
-					UT_Vector3 cv = cvRel + vco;
-					g_nvelX->setValue(iX,iY,iZ,cv[0]);	
-					g_nvelY->setValue(iX,iY,iZ,cv[1]);
-					g_nvelZ->setValue(iX,iY,iZ,cv[2]);
-					
-					
+
 				}
 			}
 		}//*/
@@ -702,7 +704,7 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 		for(int iX=0; iX < grid_divs[0]; iX++){
 			for(int iY=0; iY < grid_divs[1]; iY++){
 				for(int iZ=0; iZ < grid_divs[2]; iZ++){	
-					float collisionVal = g_col->getValue(iX,iY,iZ);	
+					//float collisionVal = g_col->getValue(iX,iY,iZ);	
 					float wxN = g_colWX->getValue(iX,iY,iZ);
 					float wxP = g_colWX->getValue(iX+1,iY,iZ);
 					float wyN = g_colWY->getValue(iX,iY,iZ);
@@ -710,44 +712,44 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 					float wzN = g_colWZ->getValue(iX,iY,iZ);
 					float wzP = g_colWZ->getValue(iX,iY,iZ+1);
 
-					UT_Vector3 n (wxP - wxN, wyP - wyN, wzP - wzN);
-					
+					if ( (wxN < 1 || wxP < 1 || wyN < 1 || wyP < 1 || wzN < 1 || wzP < 1) &&
+										        !(wxN==0 && wxP==0 && wyN==0 && wyP==0 && wzN==0 && wzP==0) ){
 
-					if(n.length() == 0) continue;
-					n.normalize();
-					UT_Vector3 vco(g_colVelX->getValue(iX,iY,iZ),
-						g_colVelY->getValue(iX,iY,iZ),
-						g_colVelZ->getValue(iX,iY,iZ));
-					//vco *= collision_vel_scale;
-					UT_Vector3 v(g_nvelX->getValue(iX,iY,iZ),
-						g_nvelY->getValue(iX,iY,iZ),
-						g_nvelZ->getValue(iX,iY,iZ));
-					
-					UT_Vector3 vrel = v - vco;
-					float vn = vrel.dot(n);
-					if(vn >= 0){
-						//Bodies are separating
-						continue;
-					}
-					UT_Vector3 vt = vrel - (n*vn);
-					UT_Vector3 cvRel;
-					float vtNorm = vt.length();
-					if(vtNorm <= -1*COF*vn){
-						//Sticks
-						cvRel[0] = 0;
-						cvRel[1] = 0;
-						cvRel[2] = 0;
+						UT_Vector3 n (wxP - wxN, wyP - wyN, wzP - wzN);
+						n.normalize();
+						UT_Vector3 vco(g_colVelX->getValue(iX,iY,iZ),
+							g_colVelY->getValue(iX,iY,iZ),
+							g_colVelZ->getValue(iX,iY,iZ));
 
-					}
-					else{
-						cvRel = vt + COF*vn*vt/vtNorm;
-					}									
-					UT_Vector3 cv = cvRel + vco;
-					g_nvelX->setValue(iX,iY,iZ,cv[0]);	
-					g_nvelY->setValue(iX,iY,iZ,cv[1]);
-					g_nvelZ->setValue(iX,iY,iZ,cv[2]);
+						UT_Vector3 v(g_nvelX->getValue(iX,iY,iZ),
+							g_nvelY->getValue(iX,iY,iZ),
+							g_nvelZ->getValue(iX,iY,iZ));
 					
-					
+						UT_Vector3 vrel = v - vco;
+						float vn = vrel.dot(n);
+						if(vn >= 0){
+							//Bodies are separating
+							continue;
+						}
+						UT_Vector3 vt = vrel - (n*vn);
+						UT_Vector3 cvRel;
+						float vtNorm = vt.length();
+						if(vtNorm <= -1*COF*vn){
+							//Sticks
+							cvRel[0] = 0;
+							cvRel[1] = 0;
+							cvRel[2] = 0;
+
+						}
+						else{
+							cvRel = vt + COF*vn*vt/vtNorm;
+						}									
+						UT_Vector3 cv = cvRel + vco;
+						g_nvelX->setValue(iX,iY,iZ,cv[0]);	
+						g_nvelY->setValue(iX,iY,iZ,cv[1]);
+						g_nvelZ->setValue(iX,iY,iZ,cv[2]);
+
+					}	
 				}
 			}
 		}//*/
@@ -812,17 +814,18 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 			//PARTICLE COLLISION!!!!!!!!!!!
 			/*
 
-			float collisionVal = g_col->getValue(p_gridx,p_gridy,p_gridz);				
+			//float collisionVal = g_col->getValue(p_gridx,p_gridy,p_gridz);				
 			float wxN = g_colWX->getValue(p_gridx,p_gridy,p_gridz);
 			float wxP = g_colWX->getValue(p_gridx+1,p_gridy,p_gridz);
 			float wyN = g_colWY->getValue(p_gridx,p_gridy,p_gridz);
 			float wyP = g_colWY->getValue(p_gridx,p_gridy+1,p_gridz);
 			float wzN = g_colWZ->getValue(p_gridx,p_gridy,p_gridz);
-			float wzP = g_colWZ->getValue(p_gridx,p_gridy,p_gridz+1);
+			float wzP = g_colWZ->getValue(p_gridx,p_gridy,p_gridz+1);		
 
-			UT_Vector3 n (wxP - wxN, wyP - wyN, wzP - wzN);			
+			if ( (wxN < 1 || wxP < 1 || wyN < 1 || wyP < 1 || wzN < 1 || wzP < 1) &&
+					        !(wxN==0 && wxP==0 && wyN==0 && wyP==0 && wzN==0 && wzP==0) ){
 
-			if(n.length() != 0){
+				UT_Vector3 n (wxP - wxN, wyP - wyN, wzP - wzN);	
 				n.normalize();
 				UT_Vector3 vco(g_colVelX->getValue(p_gridx,p_gridy,p_gridz),
 					g_colVelY->getValue(p_gridx,p_gridy,p_gridz),
