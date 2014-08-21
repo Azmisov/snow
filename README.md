@@ -1,19 +1,24 @@
 Snow Simulation
 ===============
 
+This is an implementation of "A Material Point Method for Snow Simulation" (Stomakhin et al., 2013). There is a 2D version for OpenGL and a 3D version for Houdini.
+
+## 2D Simulator
+
 You may need to modify the project build settings for it to work.
 Build dependencies:
 - GLFW: http://www.glfw.org/
 - FreeImage: http://freeimage.sourceforge.net/
 
-Prebuilt versions of these libraries are included for Debian x86-64
+Prebuilt versions of these libraries are included for debian based systems (x86-64).
 
-This is an implementation of "A Material Point Method for Snow Simulation" (Stomakhin et al., 2013) in 2D.
-
-Controls
-========
+### Controls
 - **Click:** adds a point for a snow shape
 - **Enter:** finishes previous snow shape and starts a new one
 - **C:** allows you to create a circle shape (first click sets origin, second click sets radius)
 - **F12:** converts snow shapes to particles and starts the simulation
 - **ESC:** stops the simulation and removes all snow
+
+## 3D Simulator
+
+A template for setting up the Houdini network is in **mpm.hipnc**. Source code is in **SIM_SnowSolver.c**. Run **setup.sh** to build the plugin (Note: you may need to modify setup.sh to point to your houdini installation directory).
