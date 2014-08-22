@@ -225,7 +225,7 @@ void remove_all_shapes(){
 //float TIMESTEP;
 void start_simulation(){	
 	//Convert drawn shapes to snow particles
-	snow = PointCloud::createShape(snow_shapes, Vector2f(1, 0));
+	snow = PointCloud::createShape(snow_shapes, Vector2f(0, -3));
 	//If there are no shapes, we can't do a simulation
 	if (snow == NULL) return;
 	point_size = 6;

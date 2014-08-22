@@ -5,8 +5,12 @@
 #include <GAS/GAS_Utils.h>
 #include <math.h>
 
+typedef double freal;
+typedef UT_Vector3T<freal> vector3;
+typedef UT_Matrix3T<freal> matrix3;
+
 static const int BSPLINE_RADIUS = 2;			//Radius of B-spline interpolation function
-static const float EPSILON = 1e-6;
+static const freal EPSILON = 1e-10;
 
 class SIM_SnowSolver : public GAS_SubSolver{
 public:
@@ -31,9 +35,9 @@ private:
     //Description of our sub-solver
     static const SIM_DopDescription *getDescription();
     
-	static float bspline(float x){
+	static freal bspline(freal x){
 		x = fabs(x);
-		float w;
+		freal w;
 		if (x < 1)
 			w = x*x*(x/2 - 1) + 2/3.0;
 		else if (x < 2)
@@ -43,8 +47,8 @@ private:
 		if (w < EPSILON) return 0;
 		return w;
 	}
-	static float bsplineSlope(float x){
-		float abs_x = fabs(x);
+	static freal bsplineSlope(freal x){
+		freal abs_x = fabs(x);
 		if (abs_x < 1)
 			return 1.5*x*abs_x - 2*x;
 		else if (x < 2)
