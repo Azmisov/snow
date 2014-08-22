@@ -245,7 +245,7 @@ void *simulate(void *args){
 	delay.tv_sec = 0;
 	clock_t start = clock(), end;
 	cout << "Starting simulation..." << endl;
-	Vector2f gravity = Vector2f(0, -1);
+	Vector2f gravity = Vector2f(0, GRAVITY);
 	
 	float cum_sum = 0;
 	int iter = 0;
@@ -292,13 +292,14 @@ void *simulate(void *args){
 	pthread_exit(NULL);
 }
 float adaptive_timestep(){
-	float max_vel = snow->max_velocity;
+	float max_vel = snow->max_velocity, f;
 	if (max_vel > 1e-8){
 		//We should really take the min(cellsize) I think, if the grid is not square
 		float dt = CFL * grid->cellsize[0]/sqrt(max_vel);
-		return dt > FRAMERATE ? FRAMERATE : dt;
+		f = dt > FRAMERATE ? FRAMERATE : dt;
 	}
-	return FRAMERATE;
+	else f = FRAMERATE;
+	return f > MAX_TIMESTEP ? MAX_TIMESTEP : f;
 }
 
 void redraw(){

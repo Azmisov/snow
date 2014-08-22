@@ -5,22 +5,8 @@
 #include <GAS/GAS_Utils.h>
 #include <math.h>
 
-/*
-static const float 
-	EPSILON = 1e-5,
-	YOUNGS_MODULUS = 1.4,		//Young's modulus (springiness) (1.4e5)
-	POISSONS_RATIO = .2,		//Poisson's ratio (transverse/axial strain ratio) (.2)
-	CRIT_COMPRESS = 1-1.5e-2,	//Fracture threshold for compression (1-2.5e-2)
-	CRIT_STRETCH = 1+7.5e-3,	//Fracture threshold for stretching (1+7.5e-3)
-	FLIP_PERCENT = .95,			//Weight to give FLIP update over PIC (.95)
-	HARDENING = 10.0,			//How much plastic deformation strengthens material (10)
-	CFL = .05;					//Adaptive timestep adjustment
-//*/
-float EPSILON = 1e-5;
-static const int
-	BSPLINE_RADIUS = 2;			//Radius of B-spline interpolation function
-
-//static const UT_Vector3 GRAVITY(0.0,-1.0,0.0);
+static const int BSPLINE_RADIUS = 2;			//Radius of B-spline interpolation function
+static const float EPSILON = 1e-6;
 
 class SIM_SnowSolver : public GAS_SubSolver{
 public:
