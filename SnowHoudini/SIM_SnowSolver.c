@@ -270,7 +270,7 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 	*/
 
 	/// STEP #1: Transfer mass to grid
-	
+
 	if (p_position.isValid()){
 
 		//Iterate through particles
@@ -507,20 +507,14 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 	/// STEP #5: Grid collision resolution
 
 	vector3 sdf_normal;
-	/*
+	//*
 	for(int iX=1; iX < grid_divs[0]-1; iX++){
 		for(int iY=1; iY < grid_divs[1]-1; iY++){
 			for(int iZ=1; iZ < grid_divs[2]-1; iZ++){
 				if (g_active->getValue(iX,iY,iZ)){
-					//if (!computeSDFNormal(g_col, iX, iY, iZ, sdf_normal))
-					//	continue;
-					if (g_col->getValue(iX, iY, iZ) <= 0)
+					if (!computeSDFNormal(g_col, iX, iY, iZ, sdf_normal))
 						continue;
-					
-					//Compute surface normal at this point; (gradient of SDF)
-					vector3 world_pos;
-					g_col->indexToPos(iX, iY, iZ, world_pos);
-					sdf_normal = g_col_field->getGradient(world_pos);
+
 					//Collider velocity
 					vector3 vco(
 						g_colVelX->getValue(iX,iY,iZ),
@@ -535,16 +529,19 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 					);
 					//Skip if bodies are separating
 					vector3 vrel = v - vco;
+					
 					freal vn = vrel.dot(sdf_normal);
 					if (vn >= 0) continue;
 					//Resolve collisions; also add velocity of collision object to snow velocity
 					//Sticks to surface (too slow to overcome static friction)
 					vector3 vt = vrel - (sdf_normal*vn);
+
 					freal stick = vn*COF, vt_norm = vt.length();
 					if (vt_norm <= -stick)
 						vt = vco;
 					//Dynamic friction
 					else vt += stick*vt/vt_norm + vco;
+					
 					g_nvelX->setValue(iX,iY,iZ,vt[0]);	
 					g_nvelY->setValue(iX,iY,iZ,vt[1]);
 					g_nvelZ->setValue(iX,iY,iZ,vt[2]);
@@ -552,7 +549,7 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 			}
 		}
 	}
-	*/
+	//*/
 
 	/// STEP #6: Transfer grid velocities to particles and integrate
 	/// STEP #7: Particle collision resolution
@@ -615,16 +612,18 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 		col_vel[2] = 0;
 		
 		//Interpolate surrounding nodes' SDF info to the particle (trilinear interpolation)
+
 		for (int idx=0, z=p_gridz, z_end=z+1; z<=z_end; z++){
 			freal w_z = gpos[2]-z;
 			for (int y=p_gridy, y_end=y+1; y<=y_end; y++){
 				freal w_zy = w_z*(gpos[1]-y);
 				for (int x=p_gridx, x_end=x+1; x<=x_end; x++, idx++){
-					freal weight = abs(w_zy*(gpos[0]-x));
+					freal weight = fabs(w_zy*(gpos[0]-x));
+					//cout << w_zy << "," << (gpos[0]-x) << "," << weight << endl;
 					vector3 temp_normal;
-					if (!computeSDFNormal(g_col, x, y, z, temp_normal))
-						goto SKIP_PCOLLIDE;
-
+					computeSDFNormal(g_col, x, y, z, temp_normal);
+						//goto SKIP_PCOLLIDE;
+					//cout << g_col->getValue(x, y, z) << endl;
 					//Interpolate
 					sdf_normal += temp_normal*weight;
 					col_sdf += g_col->getValue(x, y, z)*weight;
@@ -636,11 +635,14 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 		}
 
 		//Resolve particle collisions	
-		//Skip if bodies are separating
-		if (col_sdf <= 0){
+		//cout << col_sdf << endl;
+		if (col_sdf > 0){
 			vector3 vrel = vel - col_vel;
 			freal vn = vrel.dot(sdf_normal);
+			
+			//Skip if bodies are separating
 			if (vn < 0){
+				
 				//Resolve and add velocity of collision object to snow velocity
 				//Sticks to surface (too slow to overcome static friction)
 				vel = vrel - (sdf_normal*vn);
@@ -678,7 +680,7 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 		if (mask){
 			for (int i=0; i<3; i++){
 				if (mask & 0x1)
-					vel[i] *= .7;
+					vel[i] *= .05;
 				mask >>= 1;
 			}
 		}
