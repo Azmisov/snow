@@ -57,24 +57,40 @@ const SIM_DopDescription* SIM_SnowSolver::getDescription(){
 		since they get recomputed at each timestep anyways. If we split this up into
 		multiple sub-solver nodes, we'd need to make them particle attributes.
 	*/
-	static PRM_Name p_field("particles", "Particles");			//particles
-	static PRM_Name p_fe("p_fe", "Fe Attr");					//particle elastic deformation gradient
-	static PRM_Name p_fp("p_fp", "Fp Attr");					//particle plastic deformation gradient
-	static PRM_Name p_vel("p_vel", "Velocity Attr");			//particle velocity
-	static PRM_Name p_vol("p_vol", "Volume Attr");				//particle volume
-	static PRM_Name p_d("p_d", "Density Attr");					//particle density
+	static PRM_Name p_field(MPM_PARTICLES, "Particles");			//particles
+	static PRM_Name p_fe(MPM_P_FE, "Fe Attr");					//particle elastic deformation gradient
+	static PRM_Name p_fp(MPM_P_FP, "Fp Attr");					//particle plastic deformation gradient
+	static PRM_Name p_vel(MPM_P_VEL, "Velocity Attr");			//particle velocity
+	static PRM_Name p_vol(MPM_P_VOL, "Volume Attr");				//particle volume
+	static PRM_Name p_d(MPM_P_D, "Density Attr");					//particle density
 	//It may be better to remove these, if recomputing these values is actually faster than caching
-	static PRM_Name p_w("p_w", "Weights Attr");					//particle weight (for each node within 2-node radius)
-	static PRM_Name p_wg("p_wg", "Weight Gradients Attr");		//particle weight gradient (for each node within 2-node radius)
+	static PRM_Name p_w(MPM_P_W, "Weights Attr");					//particle weight (for each node within 2-node radius)
+	static PRM_Name p_wg(MPM_P_WG, "Weight Gradients Attr");		//particle weight gradient (for each node within 2-node radius)
 
 	//Grid parameters (eulerian):
-	static PRM_Name g_mass("g_mass", "Mass Field");				//grid mass
-	static PRM_Name g_nvel("g_nvel", "New Velocity Field");		//grid velocity (after applying forces)
-	static PRM_Name g_ovel("g_ovel", "Old Velocity Field");		//grid velocity (before applying forces)
-	static PRM_Name g_active("g_active", "Activated Field");	//boolean field that tells whether there are particles within a radius of 2
-	static PRM_Name g_density("g_density", "Density Field");	//grid density
-	static PRM_Name g_col("g_col", "Collision Field"); 			// grid collision
-	static PRM_Name g_colVel("g_colVel", "Collision Velocity Field"); 			// grid collision velocity
+	static PRM_Name g_mass(MPM_G_MASS, "Mass Field");				//grid mass
+	static PRM_Name g_nvel(MPM_G_NVEL, "New Velocity Field");		//grid velocity (after applying forces)
+	static PRM_Name g_ovel(MPM_G_OVEL, "Old Velocity Field");		//grid velocity (before applying forces)
+	static PRM_Name g_active(MPM_G_ACTIVE, "Activated Field");	//boolean field that tells whether there are particles within a radius of 2
+	static PRM_Name g_density(MPM_G_DENSITY, "Density Field");	//grid density
+	static PRM_Name g_col(MPM_G_COL, "Collision Field"); 			// grid collision
+	static PRM_Name g_colVel(MPM_G_COLVEL, "Collision Velocity Field"); 			// grid collision velocity
+
+	static PRM_Name parm_p_mass(MPM_P_MASS, "Particle Mass");
+	static PRM_Name parm_youngs_modulus(MPM_YOUNGS_MODULUS, "Youngs Modulus");
+	static PRM_Name parm_poissons_ratio(MPM_POISSONS_RATIO, "Poissons Ratio");
+	static PRM_Name parm_crit_comp(MPM_CRIT_COMP, "Critical Compression");
+	static PRM_Name parm_crit_stretch(MPM_CRIT_STRETCH, "Critical Stretch");
+	static PRM_Name parm_flip_percent(MPM_FLIP_PERCENT, "Flip Percent");
+	static PRM_Name parm_hardening(MPM_HARDENING, "Hardening");
+	static PRM_Name parm_cfl(MPM_CFL, "CFL");
+	static PRM_Name parm_cof(MPM_COF, "COF");
+	static PRM_Name parm_div_size(MPM_DIV_SIZE, "Division Size");
+	static PRM_Name parm_max_timestep(MPM_MAX_TIMESTEP, "Max Timestep");
+
+	static PRM_Name parm_gravity(MPM_GRAVITY, "Gravity");
+	static PRM_Name parm_bbox_min(MPM_BBOX_MIN, "BBox Min");
+	static PRM_Name parm_bbox_max(MPM_BBOX_MAX, "BBox Max");
 
 	static PRM_Template theTemplates[] = {
 		//particles
@@ -94,6 +110,22 @@ const SIM_DopDescription* SIM_SnowSolver::getDescription(){
 		PRM_Template(PRM_STRING, 1, &g_density),
 		PRM_Template(PRM_STRING, 1, &g_col),
 		PRM_Template(PRM_STRING, 1, &g_colVel),
+		//constants
+		PRM_Template(PRM_FLT_J, 1, &parm_p_mass),
+		PRM_Template(PRM_FLT_J, 1, &parm_youngs_modulus),
+		PRM_Template(PRM_FLT_J, 1, &parm_poissons_ratio),
+		PRM_Template(PRM_FLT_J, 1, &parm_crit_comp),
+		PRM_Template(PRM_FLT_J, 1, &parm_crit_stretch),
+		PRM_Template(PRM_FLT_J, 1, &parm_flip_percent),
+		PRM_Template(PRM_FLT_J, 1, &parm_hardening),
+		PRM_Template(PRM_FLT_J, 1, &parm_cfl),
+		PRM_Template(PRM_FLT_J, 1, &parm_cof),
+		PRM_Template(PRM_FLT_J, 1, &parm_div_size),
+		PRM_Template(PRM_FLT_J, 1, &parm_max_timestep),
+		//vector constants
+		PRM_Template(PRM_XYZ, 3, &parm_gravity),
+		PRM_Template(PRM_XYZ, 3, &parm_bbox_min),
+		PRM_Template(PRM_XYZ, 3, &parm_bbox_max),
 		//what is this for ???
 		PRM_Template()
 	};
@@ -114,46 +146,31 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 
 	/// STEP #0: Retrieve all data objects from Houdini
 
-	OP_Context context(CHgetEvalTime());
-	OP_Node* solver_node = engine.getOwner()->findNode("/obj/DOP/mpm_solver/solver");
-	OP_Node* collision_node = engine.getOwner()->findNode("/obj/DOP/mpm_solver/collision_mask");
-	OP_Node* mpm_node = engine.getOwner()->findNode("/obj/DOP/mpm_solver");
 	//Scalar params
-	freal particle_mass = mpm_node->evalFloat("p_mass",0,time),
-		YOUNGS_MODULUS = mpm_node->evalFloat("youngs_modulus",0,time),
-		POISSONS_RATIO = mpm_node->evalFloat("poissons_ratio",0,time),
-		CRIT_COMPRESS = mpm_node->evalFloat("crit_comp",0,time),
-		CRIT_STRETCH = mpm_node->evalFloat("crit_stretch",0,time),
-		FLIP_PERCENT = mpm_node->evalFloat("flip_percent",0,time),
-		HARDENING = mpm_node->evalFloat("hardening",0,time),
-		CFL = mpm_node->evalFloat("cfl",0,time),
-		COF = mpm_node->evalFloat("cof",0,time),
-		division_size = mpm_node->evalFloat("div_size",0,time),
-		MAX_timestep = mpm_node->evalFloat("max_timestep",0,time);	
-	//Vector param
-	vector3 GRAVITY(
-		mpm_node->evalFloat("gravity",0,time),
-		mpm_node->evalFloat("gravity",1,time),
-		mpm_node->evalFloat("gravity",2,time)
-	);
-	vector3 bbox_min_limit(
-		mpm_node->evalFloat("bbox_min",0,time),
-		mpm_node->evalFloat("bbox_min",1,time),
-		mpm_node->evalFloat("bbox_min",2,time)
-	);
-	vector3 bbox_max_limit(
-		mpm_node->evalFloat("bbox_max",0,time),
-		mpm_node->evalFloat("bbox_max",1,time),
-		mpm_node->evalFloat("bbox_max",2,time)
-	);
+	freal particle_mass = getPMass();
+	freal YOUNGS_MODULUS = getYoungsModulus();
+	freal POISSONS_RATIO = getPoissonsRatio();
+	freal CRIT_COMPRESS = getCritComp();
+	freal CRIT_STRETCH = getCritStretch();
+	freal FLIP_PERCENT = getFlipPercent();
+	freal HARDENING = getHardening();
+	freal CFL = getCfl();
+	freal COF = getCof();
+	freal division_size = getDivSize();
+	freal MAX_timestep = getMaxTimestep();
+	//Vector params
+	vector3 GRAVITY = getGravity();
+	vector3 bbox_min_limit = getBboxMin();
+	vector3 bbox_max_limit = getBboxMax();
 
+	//Particle params
 	UT_String s_p, s_vol, s_den, s_vel, s_fe, s_fp;
-	solver_node->evalString(s_p, "particles",0,time);
-	solver_node->evalString(s_vol,"p_vol",0,time);
-	solver_node->evalString(s_den,"p_d",0,time);
-	solver_node->evalString(s_vel,"p_vel",0,time);
-	solver_node->evalString(s_fe,"p_fe",0,time);
-	solver_node->evalString(s_fp,"p_fp",0,time);
+	getParticles(s_p);
+	getPVol(s_vol);
+	getPD(s_den);
+	getPVel(s_vel);
+	getPFe(s_fe);
+	getPFp(s_fp);
 
 	SIM_Geometry* geometry = (SIM_Geometry*) obj->getNamedSubData(s_p);
 	if (!geometry) return true;
@@ -190,37 +207,37 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 	//Get grid data
 	SIM_ScalarField *g_mass_field;
 	SIM_DataArray g_mass_data;
-	getMatchingData(g_mass_data, obj, "g_mass");	
+	getMatchingData(g_mass_data, obj, MPM_G_MASS);	
 	g_mass_field = SIM_DATA_CAST(g_mass_data(0), SIM_ScalarField);
 
 	SIM_VectorField *g_nvel_field;
 	SIM_DataArray g_nvel_data;
-	getMatchingData(g_nvel_data, obj, "g_nvel");
+	getMatchingData(g_nvel_data, obj, MPM_G_NVEL);
 	g_nvel_field = SIM_DATA_CAST(g_nvel_data(0), SIM_VectorField);
 
 	SIM_VectorField *g_ovel_field;
 	SIM_DataArray g_ovel_data;
-	getMatchingData(g_ovel_data, obj, "g_ovel");
+	getMatchingData(g_ovel_data, obj, MPM_G_OVEL);
 	g_ovel_field = SIM_DATA_CAST(g_ovel_data(0), SIM_VectorField);
 
 	SIM_ScalarField *g_active_field;
 	SIM_DataArray g_active_data;
-	getMatchingData(g_active_data, obj, "g_active");	
+	getMatchingData(g_active_data, obj, MPM_G_ACTIVE);	
 	g_active_field = SIM_DATA_CAST(g_active_data(0), SIM_ScalarField);
 
 	SIM_ScalarField *g_density_field;
 	SIM_DataArray g_density_data;
-	getMatchingData(g_density_data, obj, "g_density");	
+	getMatchingData(g_density_data, obj, MPM_G_DENSITY);	
 	g_density_field = SIM_DATA_CAST(g_density_data(0), SIM_ScalarField);
 
 	SIM_ScalarField *g_col_field;
 	SIM_DataArray g_col_data;
-	getMatchingData(g_col_data, obj, "g_col");	
+	getMatchingData(g_col_data, obj, MPM_G_COL);	
 	g_col_field = SIM_DATA_CAST(g_col_data(0), SIM_ScalarField);
 
 	SIM_VectorField *g_colVel_field;
 	SIM_DataArray g_colVel_data;
-	getMatchingData(g_colVel_data, obj, "g_colVel");	
+	getMatchingData(g_colVel_data, obj, MPM_G_COLVEL);	
 	g_colVel_field = SIM_DATA_CAST(g_colVel_data(0), SIM_VectorField);
 	
 	UT_VoxelArrayF
