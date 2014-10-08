@@ -33,6 +33,7 @@
 #define MPM_COF "cof"
 #define MPM_DIV_SIZE "div_size"
 #define MPM_MAX_TIMESTEP "max_timestep"
+#define MPM_MAX_VEL "max_vel"
 
 #define MPM_GRAVITY "gravity"
 #define MPM_BBOX_MIN "bbox_min"
@@ -74,6 +75,7 @@ public:
 	GETSET_DATA_FUNCS_F(MPM_CFL, Cfl);
 	GETSET_DATA_FUNCS_F(MPM_COF, Cof);
 	GETSET_DATA_FUNCS_F(MPM_DIV_SIZE, DivSize);
+	GETSET_DATA_FUNCS_F(MPM_MAX_VEL, MaxVel);
 	GETSET_DATA_FUNCS_F(MPM_MAX_TIMESTEP, MaxTimestep);
 
 	GET_DATA_FUNC_V3(MPM_GRAVITY, Gravity);

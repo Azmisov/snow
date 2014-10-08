@@ -86,7 +86,7 @@ const SIM_DopDescription* SIM_SnowSolver::getDescription(){
 	static PRM_Name parm_cfl(MPM_CFL, "CFL");
 	static PRM_Name parm_cof(MPM_COF, "COF");
 	static PRM_Name parm_div_size(MPM_DIV_SIZE, "Division Size");
-	static PRM_Name parm_max_timestep(MPM_MAX_TIMESTEP, "Max Timestep");
+	static PRM_Name parm_max_vel(MPM_MAX_VEL, "Maximum Velocity");
 
 	static PRM_Name parm_gravity(MPM_GRAVITY, "Gravity");
 	static PRM_Name parm_bbox_min(MPM_BBOX_MIN, "BBox Min");
@@ -121,7 +121,7 @@ const SIM_DopDescription* SIM_SnowSolver::getDescription(){
 		PRM_Template(PRM_FLT_J, 1, &parm_cfl),
 		PRM_Template(PRM_FLT_J, 1, &parm_cof),
 		PRM_Template(PRM_FLT_J, 1, &parm_div_size),
-		PRM_Template(PRM_FLT_J, 1, &parm_max_timestep),
+		PRM_Template(PRM_FLT_J, 1, &parm_max_vel),
 		//vector constants
 		PRM_Template(PRM_XYZ, 3, &parm_gravity),
 		PRM_Template(PRM_XYZ, 3, &parm_bbox_min),
@@ -157,7 +157,7 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 	freal CFL = getCfl();
 	freal COF = getCof();
 	freal division_size = getDivSize();
-	freal MAX_timestep = getMaxTimestep();
+	freal max_vel = getMaxVel();
 	//Vector params
 	vector3 GRAVITY = getGravity();
 	vector3 bbox_min_limit = getBboxMin();
@@ -513,9 +513,18 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 					nodey_ovel += framerate*(GRAVITY[1] - forcey*node_mass);
 					nodez_ovel += framerate*(GRAVITY[2] - forcez*node_mass);
 					
-					g_nvelX->setValue(iX,iY,iZ,nodex_ovel);
-					g_nvelY->setValue(iX,iY,iZ,nodey_ovel);
-					g_nvelZ->setValue(iX,iY,iZ,nodez_ovel);
+					//Limit velocity to max_vel
+					vector3 g_nvel(nodex_ovel, nodey_ovel, nodez_ovel);
+					freal nvelNorm = g_nvel.length();
+					if(nvelNorm > max_vel){
+						freal velRatio = max_vel/nvelNorm;
+						g_nvel*= velRatio;
+					}
+
+					g_nvelX->setValue(iX,iY,iZ,g_nvel[0]);
+					g_nvelY->setValue(iX,iY,iZ,g_nvel[1]);
+					g_nvelZ->setValue(iX,iY,iZ,g_nvel[2]);
+
 				}
 			}
 		}
@@ -681,6 +690,7 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 		pos += framerate*vel;
 		//Limit particle position
 		int mask = 0;
+		/*		
 		for (int i=0; i<3; i++){
 			if (pos[i] > bbox_max_limit[i]){
 				pos[i] = bbox_max_limit[i];
@@ -700,7 +710,7 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 					vel[i] *= .05;
 				mask >>= 1;
 			}
-		}
+		}//*/
 		p_vel.set(pid,vel);
 		p_position.set(pid,pos);
 
