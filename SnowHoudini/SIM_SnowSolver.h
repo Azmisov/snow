@@ -21,6 +21,7 @@
 #define MPM_G_DENSITY "g_density"
 #define MPM_G_COL "g_col"
 #define MPM_G_COLVEL "g_colVel"
+#define MPM_G_EXTFORCE "g_extForce"
 
 #define MPM_P_MASS "p_mass"
 #define MPM_YOUNGS_MODULUS "youngs_modulus"
@@ -64,6 +65,7 @@ public:
 	GET_DATA_FUNC_S(MPM_G_DENSITY, GDensity);
 	GET_DATA_FUNC_S(MPM_G_COL, GCol);
 	GET_DATA_FUNC_S(MPM_G_COLVEL, GColVel);
+	GET_DATA_FUNC_S(MPM_G_EXTFORCE, GExtForce);
 
     GETSET_DATA_FUNCS_F(MPM_P_MASS, PMass);
     GETSET_DATA_FUNCS_F(MPM_YOUNGS_MODULUS, YoungsModulus);

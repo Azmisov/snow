@@ -75,6 +75,7 @@ const SIM_DopDescription* SIM_SnowSolver::getDescription(){
 	static PRM_Name g_density(MPM_G_DENSITY, "Density Field");	//grid density
 	static PRM_Name g_col(MPM_G_COL, "Collision Field"); 			// grid collision
 	static PRM_Name g_colVel(MPM_G_COLVEL, "Collision Velocity Field"); 			// grid collision velocity
+	static PRM_Name g_extForce(MPM_G_EXTFORCE, "External Force Field"); //grid external forces
 
 	static PRM_Name parm_p_mass(MPM_P_MASS, "Particle Mass");
 	static PRM_Name parm_youngs_modulus(MPM_YOUNGS_MODULUS, "Youngs Modulus");
@@ -110,6 +111,7 @@ const SIM_DopDescription* SIM_SnowSolver::getDescription(){
 		PRM_Template(PRM_STRING, 1, &g_density),
 		PRM_Template(PRM_STRING, 1, &g_col),
 		PRM_Template(PRM_STRING, 1, &g_colVel),
+		PRM_Template(PRM_STRING, 1, &g_extForce),
 		//constants
 		PRM_Template(PRM_FLT_J, 1, &parm_p_mass),
 		PRM_Template(PRM_FLT_J, 1, &parm_youngs_modulus),
@@ -239,6 +241,11 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 	SIM_DataArray g_colVel_data;
 	getMatchingData(g_colVel_data, obj, MPM_G_COLVEL);	
 	g_colVel_field = SIM_DATA_CAST(g_colVel_data(0), SIM_VectorField);
+
+	SIM_VectorField *g_extForce_field;
+	SIM_DataArray g_extForce_data;
+	getMatchingData(g_extForce_data, obj, MPM_G_EXTFORCE);	
+	g_extForce_field = SIM_DATA_CAST(g_extForce_data(0), SIM_VectorField);
 	
 	UT_VoxelArrayF
 		*g_mass = g_mass_field->getField()->fieldNC(),
@@ -251,6 +258,9 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 		*g_colVelX = g_colVel_field->getField(0)->fieldNC(),
 		*g_colVelY = g_colVel_field->getField(1)->fieldNC(),
 		*g_colVelZ = g_colVel_field->getField(2)->fieldNC(),
+		*g_extForceX = g_extForce_field->getField(0)->fieldNC(),
+		*g_extForceY = g_extForce_field->getField(1)->fieldNC(),
+		*g_extForceZ = g_extForce_field->getField(2)->fieldNC(),
 		*g_col = g_col_field->getField()->fieldNC(),
 		*g_active = g_active_field->getField()->fieldNC();
 
@@ -508,10 +518,12 @@ bool SIM_SnowSolver::solveGasSubclass(SIM_Engine &engine, SIM_Object *obj, SIM_T
 					freal forcey = g_nvelY->getValue(iX,iY,iZ);
 					freal forcez = g_nvelZ->getValue(iX,iY,iZ);
 					freal node_mass = 1/(g_mass->getValue(iX,iY,iZ));
-
-					nodex_ovel += framerate*(GRAVITY[0] - forcex*node_mass);
-					nodey_ovel += framerate*(GRAVITY[1] - forcey*node_mass);
-					nodez_ovel += framerate*(GRAVITY[2] - forcez*node_mass);
+					freal ext_forceX = GRAVITY[0] + g_extForceX->getValue(iX,iY,iZ);
+					freal ext_forceY = GRAVITY[1] + g_extForceY->getValue(iX,iY,iZ);
+					freal ext_forceZ = GRAVITY[2] + g_extForceZ->getValue(iX,iY,iZ);
+					nodex_ovel += framerate*(ext_forceX - forcex*node_mass);
+					nodey_ovel += framerate*(ext_forceY - forcey*node_mass);
+					nodez_ovel += framerate*(ext_forceZ - forcez*node_mass);
 					
 					//Limit velocity to max_vel
 					vector3 g_nvel(nodex_ovel, nodey_ovel, nodez_ovel);
