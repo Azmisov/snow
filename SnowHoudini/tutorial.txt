@@ -1,0 +1,28 @@
+Follow this tutorial to get a basic idea of how to use the digital asset. The specific settings listed here are just a sample set up to quickly get a simulation and render underway.
+
+1. Install SIM_SnowSolver.c
+
+Linux: Run setup.sh (you may have to modify it to point to your Houdini install directory)
+Windows: Open the Houdini command line tool. Use the hcustom command to build SIM_SnowSolver.c (you may have to install a version of Visual Studio C++)
+
+2. Install ramshorn_fx_mpm_snow_otl_stable.otl
+
+In Houdini go to File > Install Digital Asset Library... (Or Assets > Install Asset Library... in Houdini 14)  Select the otl as the Digital Asset Library. Hit accept. **Note: in Houdini 14, there may be an issue with the definition of certain built-in DOP nodes if this otl is included in your scanned OTL directories** 
+
+3. Create snow source geometry
+
+Tab in a sphere. Change the uniform scale to 0.3. Turn off the sphere's display flag. Tab in a ramshorn_fx_mpm_snow node. Set the Particle Geometry to the sphere you just created. You should see snow particles in the shape of your sphere. 
+
+4. Simulate
+
+Hit play on the timeline and simulate the first 20 frames or so. You should see the snowball hit the bottom of the bounding box and split apart. (Each frame may take 30+ seconds to simulate)
+
+5. Render one frame 
+
+Scrub to any frame you've simulated (except frame 1, which should not be rendered.) Add an area light and environment light to your scene. On the Rendering tab, uncheck Display DOP. Change the pscale Multiplier to 9e-03, then check Display Volume. When you render out the frame, you should be able to see your snowy volume. (It will look less like packing peanuts when you use more particles and a smaller pscale Multiplier.)  
+
+6. Bake/Render simulation
+
+If you want to render your simulation later without having to re-calculate, use the Bake Particles tab to write each frame to disk. Under the Rendering tab, check Import Baked Particles and select your baked sequence.
+   
+     

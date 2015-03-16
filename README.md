@@ -21,4 +21,4 @@ Prebuilt versions of these libraries are included for debian based systems (x86-
 
 ## 3D Simulator
 
-A template for setting up the Houdini network is in **mpm.hipnc**. Source code is in **SIM_SnowSolver.c**. Run **setup.sh** to build the plugin (Note: you may need to modify setup.sh to point to your houdini installation directory).
+A Houdini digital asset, **ramshorn_fx_mpm_snow_otl_stable.otl** has been created for simulation and rendering setup. You'll need to install this otl as well as the snow solver node plugin.  Source code is in **SIM_SnowSolver.c**. Run **setup.sh** to build the plugin (Note: you may need to modify setup.sh to point to your houdini installation directory). See **tutorial.txt** and **tutorial.hipnc** for a basic setup. 
