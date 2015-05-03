@@ -17,7 +17,9 @@ Vector2f circle_origin;
 bool simulating = false;
 vector<Shape*> snow_shapes;
 int point_size;
-PointCloud* snow;
+PointCloud* snow = NULL;
+PointCloud* snow2 = NULL;
+PointCloud* snow3 = NULL;
 Grid* grid;
 
 int main(int argc, char** argv){
@@ -58,14 +60,28 @@ int main(int argc, char** argv){
 #endif
 	
 	/*
-	Shape* x = new Shape();
-	x->addPoint(.6, .6);
-	x->addPoint(.6, .4);
-	x->addPoint(.4, .4);
-	x->addPoint(.4, .6);
-	snow_shapes.push_back(x);
+	Shape* snowball = new Shape();
+	const int segments = 18;
+	//Cool circle algorithm: http://slabode.exofire.net/circle_draw.shtml
+	circle_origin = Vector2f(.5,.65);
+	float radius = .15,
+		theta = 6.283185307 / (float) segments,
+		tan_fac = tan(theta),
+		cos_fac = cos(theta),
+		x = radius,
+		y = 0;
+	for (int i=0; i<segments; i++){
+		snowball->addPoint(x+circle_origin[0], y+circle_origin[1]);
+		float flip_x = -y, flip_y = x;
+		x += flip_x*tan_fac;
+		y += flip_y*tan_fac;
+		x *= cos_fac;
+		y *= cos_fac;
+	}
+	snow_shapes.push_back(snowball);
 	start_simulation();
 	//*/
+	//start_simulation();
 	
 	while (!glfwWindowShouldClose(window)){
 		if (dirty_buffer){
@@ -146,6 +162,9 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 			break;
 		case GLFW_KEY_ESCAPE:
 			remove_all_shapes();
+			if (snow != NULL) delete snow;
+			if (snow2 != NULL) delete snow2;
+			if (snow3 != NULL) delete snow3;
 			if (simulating)
 				simulating = false;
 			dirty_buffer = true;
@@ -185,7 +204,7 @@ void mouse_callback(GLFWwindow* window, int btn, int action, int mods){
 				break;
 			//Circle radius
 			case 2:
-				const int segments = 12;
+				const int segments = 18;
 				//Cool circle algorithm: http://slabode.exofire.net/circle_draw.shtml
 				float x_dif = circle_origin[0] - x,
 					y_dif = circle_origin[1] - y,
@@ -223,9 +242,21 @@ void remove_all_shapes(){
 
 //Simulation
 //float TIMESTEP;
-void start_simulation(){	
+void start_simulation(){
+	/* Multiple snow shapes
+	snow_shapes.push_back(generateSnowball(Vector2f(1.1,1.1), .27));
+	snow = PointCloud::createShape(snow_shapes, Vector2f(10, 10));
+	remove_all_shapes();
+	snow_shapes.push_back(generateSnowball(Vector2f(1.1,.9), .25));
+	PointCloud* snow2 = PointCloud::createShape(snow_shapes, Vector2f(11, -2));
+	remove_all_shapes();
+	snow_shapes.push_back(generateSnowball(Vector2f(.87,1.05), .28));
+	PointCloud* snow3 = PointCloud::createShape(snow_shapes, Vector2f(-11, 5));
+	snow->merge(*snow2);
+	snow->merge(*snow3);
+	*/
 	//Convert drawn shapes to snow particles
-	snow = PointCloud::createShape(snow_shapes, Vector2f(0, -3));
+	snow = PointCloud::createShape(snow_shapes, Vector2f(2, 0));
 	//If there are no shapes, we can't do a simulation
 	if (snow == NULL) return;
 	point_size = 6;
@@ -308,6 +339,7 @@ void redraw(){
 	
 	if (simulating){
 		//Grid nodes
+                /*
 		glPointSize(1);
 		glColor3f(0, .7, 1);
 		glBegin(GL_POINTS);
@@ -316,6 +348,7 @@ void redraw(){
 				glVertex2fv((grid->origin+grid->cellsize*Vector2f(i, j)).data);
 		}
 		glEnd();
+                 */
 
 		//Snow particles
 		if (SUPPORTS_POINT_SMOOTH)
@@ -325,8 +358,9 @@ void redraw(){
 		for (int i=0; i<snow->size; i++){
 			Particle& p = snow->particles[i];
 			//We can use the particle's density to vary color
-			float density = p.density/DENSITY*.18;
-			density += .82;
+			float contrast = 0.6;
+			float density = p.density/DENSITY*contrast;
+			density += 1-contrast;
 			glColor3f(density, density, density);
 			glVertex2fv(p.position.data);
 		}
@@ -366,3 +400,23 @@ void save_buffer(int time){
 	FreeImage_Unload(img);
 }
 #endif
+
+Shape* generateSnowball(Vector2f origin, float radius){
+	Shape* snowball = new Shape();
+	const int segments = 18;
+	//Cool circle algorithm: http://slabode.exofire.net/circle_draw.shtml
+	float theta = 6.283185307 / (float) segments,
+		tan_fac = tan(theta),
+		cos_fac = cos(theta),
+		x = radius,
+		y = 0;
+	for (int i=0; i<segments; i++){
+		snowball->addPoint(x+origin[0], y+origin[1]);
+		float flip_x = -y, flip_y = x;
+		x += flip_x*tan_fac;
+		y += flip_y*tan_fac;
+		x *= cos_fac;
+		y *= cos_fac;
+	}
+	return snowball;
+}

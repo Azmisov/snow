@@ -31,6 +31,7 @@ void save_buffer(int time);
 //Shape stuff
 void create_new_shape();
 void remove_all_shapes();
+Shape* generateSnowball(Vector2f origin, float radius);
 
 #endif
 
