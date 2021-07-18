@@ -3,6 +3,10 @@ Snow Simulation
 
 This is an implementation of "A Material Point Method for Snow Simulation" (Stomakhin et al., 2013). There is a 2D version for OpenGL and a 3D version for Houdini.
 
+[Demo video is on YouTube:](https://www.youtube.com/watch?v=13MqvmScNCc)
+
+[![Demo video](https://img.youtube.com/vi/13MqvmScNCc/0.jpg)](https://www.youtube.com/watch?v=13MqvmScNCc)
+
 ## 2D Simulator
 
 You may need to modify the project build settings for it to work.
