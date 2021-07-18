@@ -1,0 +1,81 @@
+Some of my notes figuring out how to get implicit calculation to work:
+
+Okay, here is the new calculation; a lot of it is the same, but we're doing things a little different.
+Instead of recomputing dF at each conjugate gradient step, we're going to use a cached output vector.
+We know that v* = Eu; we're going to precompute E for each particle (unlike how they do it in implicit_math.pdf)
+	Eu = u - beta*dt/m*dforce
+	dforce = -V*Ap*(Fe^T)*weight_grad, summed over all the particles
+	Ap = 2mu*(dF-dR) + lambda*cofactor*(cofactor : dF) + lambda(Je-1)*(dCofactor)
+	dF = (ux*weight_gradx + uy*weight_grady + uz*weight_gradz)*dt*Fe
+We'll extract the parenthetical term of dF and call it theta
+	theta = (ux*weight_gradx + uy*weight_grady + uz*weight_gradz)
+	dF' = dt*Fe
+	dF = theta*dF'
+From here, we can just use dt*Fe for dF and multiply by theta at the end
+	Eu = u - theta*beta*dt/m*dforce'
+
+
+
+To get dR, we need to do some tricky matrix stuff; we'll say that
+	dR = Re*(Re^T * dR)
+This works, because Re is skew symmetric (or hermitian or something like that). Computing
+Re^T * dR is relatively easy, since we have this nice identity:
+	(Re^T * dR) * S + S * (Re^T * dR) = (R^T * dF) - (dF^T * R)
+S here is the hermitian matrix of the polar decomposition of Fe. It turns out that both sides
+are skew symmetric:
+				  [0   a  b]                             [0   d  e]
+	(Re^T * dR) = [-a  0  c] , (R^T * dF) - (dF^T * R) = [-d  0  f]
+				  [-b -c  0]                             [-e -f  0]
+Multiplying out, we get the following, in terms of a-f:
+	[s10*a + s20*b    s11*a + s21*b    s12*a + s22*b]   [-s01*a - s02*b   s00*a - s02*c   s00*b + s01*c]   [0  d  e]
+	[-s00*a + s20*c  -s01*a + s21*c   -s02*a + s22*c] + [-s11*a - s12*b   s10*a - s12*c   s10*b + s11*c] = [-d 0  f]
+	[-s00*b - s10*c  -s01*b - s11*c   -s02*b - s12*c]   [-s21*a - s22*b   s20*a - s22*c   s20*b + s21*c]   [-e -f 0]
+Now, write equations for d, e, and f:
+	d = a*(s00+s11) + b*s21 + c*(-s02)
+	e = a*(s12) + b*(s00+s22) + c*(s01)
+	f = a*(-s02) + b*(s10) + c*(s11+s22)
+In matrix notation, this yeilds a linear system:
+	[s00+s11   s21          -s02][a]   [d]
+	[s12       s00+s22       s01][b] = [e]
+	[-s02      s10       s11+s22][c]   [f]
+If we use dF' instead of dF, then dR = theta*dR' --> should probably double check this though...
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In the case of 2D, we just have
+	(Re^T * dR) = [0  a] , (R^T * dF) - (dF^T * R) =  [0  d]
+				  [-a 0]                              [-d 0]
+This gives us the following equation:
+	[s10*a    s11*a] + [-s01*a  s00*a] = [0  d]
+	[-s00*a  -s01*a]   [-s11*a  s10*a]   [-d 0]
+TODO: double check this solution??? what is the correct equation for "d"?
+The solution is then:
+	a*(s00+s11) = d
+
+[r00 r10][f00 f01] - [f00 f10][r00 r01] = [r00f00+r11f10 r00f01+r10f11] - [r00f00+r10f10 r01f00+r11f10]
+[r01 r11][f10 f11]   [f01 f11][r10 r11]   [r01f00+r11f10 r01f01+r11f11]   [r00f01+r10f11 r01f01+r11f11]
+(r00f01+r10f11) - (r01f00+r11f10) -> row major
+(r00f10+r01f11) - (r10f00+r11f01) -> col major
+
+[r00 r01][0  d] = [-d*r01 d*r00]
+[r10 r11][-d 0]   [-d*r11 d*r10]
+
+
+
+To get d(COFACTOR_OF_F) we just take the derivative of the individual entries in the cofactor matrix. For example,
+in a 3x3 matrix, this is how you would do it for the first entry
+	    [a b c]
+	F = [d e f]
+	    [g h i]
+	cofactor(0,0) = (e*i - f*h)
+	d_cofactor(0,0) = ((de*i+e*di) - (df*h+f*dh))
+The de, di, df, and dh terms can be taken directly from the dF matrix. This makes it really easy to compute each entry.
+Note that we are using theta*dF instead of just dF. This means that the computation ends up being:
+	d_cofactor(0,0) = ((dt*e*i+e*dt*i) - (dt*f*h+f*dt*h)
+					= ((2dt*e*i) - (2dt*f*h))
+					= 2*dt*cofactor(0,0)
+
+
+Now, if everything is correct, we should get a linear system of the form:
+	v* = u - (beta*dt/m)*dforce*u
+	   = (I - (beta*dt/m)*dforce)*u
+This is just a simple matrix solve:
+	v* = E*u
